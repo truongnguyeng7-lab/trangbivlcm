@@ -1,0 +1,2335 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    /* ==========================================================================
+       WINDOWS DARK MODE LAYOUT & RESET
+       ========================================================================== */
+    html, body {
+      height: 100%; margin: 0; padding: 0;
+    }
+
+    /* Thanh cuộn chuẩn Dark mode */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #111111; }
+    ::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #555; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif; font-size: 13px;
+      background-color: #111111; /* Nền tối Win 11 */
+      color: #cccccc; /* Chữ xám sáng */
+      overflow: hidden;
+    }
+
+    .app-container { display: flex; height: 100vh; width: 100vw; }
+
+    /* ==========================================================================
+       SIDEBAR
+       ========================================================================== */
+    .sidebar {
+      width: 260px; background: #202020; border-right: 1px solid #333333;
+      display: flex; flex-direction: column; transition: width 0.3s ease; flex-shrink: 0; z-index: 100;
+    }
+    .sidebar.collapsed { width: 70px; }
+    .sidebar-header { padding: 16px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #333333; }
+    
+    .toggle-btn {
+      background: transparent; border: none; color: #cccccc; font-size: 18px;
+      width: 36px; height: 36px; border-radius: 8px; cursor: pointer; display: flex;
+      align-items: center; justify-content: center; transition: background 0.2s ease;
+    }
+    .toggle-btn:hover { background: #333333; color: #ffffff; }
+
+    .logo-text { font-size: 16px; font-weight: 800; color: #ffffff; white-space: nowrap; transition: opacity 0.2s ease; }
+    .sidebar.collapsed .logo-text { opacity: 0; pointer-events: none; }
+
+    .sidebar-menu { flex: 1; overflow-y: auto; padding: 12px 8px; display: flex; flex-direction: column; gap: 4px; }
+    
+    .sidebar-item {
+      display: flex; align-items: center; padding: 12px 14px; border-radius: 6px; cursor: pointer;
+      color: #bbbbbb; font-weight: 600; font-size: 14px; transition: all 0.2s ease; white-space: nowrap; overflow: hidden;
+    }
+    .sidebar-item:hover { background: #2d2d2d; color: #ffffff; }
+    .sidebar-item.active { background: #2d2d2d; color: #4cc2ff; box-shadow: inset 3px 0 0 #4cc2ff; }
+    .sidebar-item.disabled { opacity: 0.4; cursor: not-allowed; }
+    .sidebar-item.disabled:hover { background: transparent; color: #bbbbbb; }
+
+    .sidebar-icon { font-size: 20px; min-width: 30px; display: flex; align-items: center; justify-content: center; margin-right: 12px; }
+    .sidebar-text { transition: opacity 0.2s ease; }
+    .sidebar.collapsed .sidebar-text { opacity: 0; }
+
+    .sidebar-footer { padding: 16px; border-top: 1px solid #333333; display: flex; flex-direction: column; gap: 10px; transition: opacity 0.2s ease; }
+    .sidebar.collapsed .sidebar-footer { opacity: 0; pointer-events: none; }
+
+    .menu-group-title {
+      margin: 10px 0 5px 15px; font-size: 11px; color: #777777; font-weight: bold; text-transform: uppercase;
+      transition: opacity 0.2s ease; white-space: nowrap;
+    }
+    .sidebar.collapsed .menu-group-title { opacity: 0; }
+
+    /* ==========================================================================
+       MAIN CONTENT
+       ========================================================================== */
+    .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; padding: 16px 24px; position: relative; }
+    
+    /* Hình nền mờ nếu có */
+    body::before {
+      content: ""; position: fixed; inset: 0;
+      background-image: url("https://st.download.com.vn/data/image/2023/10/03/vo-lam-chi-mong-700.jpg");
+      background-size: cover; background-position: center; opacity: 0.03; z-index: -1; pointer-events: none;
+    }
+
+    h2, .app-title { color: #ffffff; margin-bottom: 12px; font-weight: 800; font-size: 22px; }
+    label { font-weight: 500; font-size: 13px; line-height: 18px; color: #cccccc; }
+
+    /* ==========================================================================
+       GIAO DIỆN TÌM KIẾM MỚI (XẾP NGANG)
+       ========================================================================== */
+    .search-section {
+      display: flex; flex-direction: column; gap: 20px;
+      background: #202020; border: 1px solid #333; border-radius: 8px; padding: 20px;
+      margin-bottom: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+
+    .search-row { display: flex; gap: 12px; width: 100%; height: 46px; }
+    
+    .search-box {
+      flex: 1; display: flex; align-items: center; background: #111111;
+      border: 1px solid #444; border-radius: 8px; padding: 0 16px; transition: all 0.2s ease;
+      position: relative;
+    }
+    .search-box:focus-within { border-color: #4cc2ff; box-shadow: 0 0 0 1px #4cc2ff; background: #1a1a1a; }
+    .search-icon-left { color: #888; font-size: 16px; margin-right: 12px; }
+    .search-box input[type="text"] {
+      flex: 1; height: 100%; border: none; outline: none; background: transparent; color: #fff; font-size: 14px;
+    }
+    .clear-icon { color: #666; cursor: pointer; font-size: 14px; padding: 4px; border-radius: 50%; font-weight: bold; }
+    .clear-icon:hover { color: #fff; background: #333; }
+    
+    .search-btn {
+      background: #0078d4; color: #fff; border: none; border-radius: 8px; padding: 0 24px;
+      font-weight: 600; font-size: 15px; cursor: pointer; display: flex; align-items: center; gap: 8px;
+      transition: background 0.2s; box-shadow: 0 2px 4px rgba(0, 120, 212, 0.3);
+    }
+    .search-btn:hover { background: #0063b1; }
+
+    .section-label { font-size: 12px; font-weight: 800; color: #888; text-transform: uppercase; margin-bottom: 10px; display: block; }
+
+    /* HOTKEYS */
+    .hotkey-group { display: flex; flex-wrap: wrap; gap: 10px; }
+    .hotkey-group label {
+      display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px;
+      border-radius: 6px; background: #1a1a1a; border: 1px solid #333; color: #ccc;
+      font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s ease;
+    }
+    .hotkey-group input[type="checkbox"] { display: none; }
+    .hotkey-group label:hover { background: #252525; border-color: #555; color: #fff; }
+    
+    /* Hiệu ứng màu viền theo phong cách Dark Mode */
+    .hotkey-group label:has(input:checked) { box-shadow: inset 0 0 0 1px currentColor; background: rgba(255,255,255,0.05); }
+    .hk-1hit:has(input:checked) { color: #ff6b6b; border-color: #ff6b6b; }
+    .hk-mien:has(input:checked) { color: #4cc2ff; border-color: #4cc2ff; }
+    .hk-batloi:has(input:checked) { color: #ff8a8a; border-color: #ff8a8a; }
+    .hk-khang:has(input:checked) { color: #81c995; border-color: #81c995; }
+    .hk-xuyen:has(input:checked) { color: #fbbc04; border-color: #fbbc04; }
+    .hk-buff:has(input:checked) { color: #fdd663; border-color: #fdd663; }
+    .hk-nhay:has(input:checked) { color: #c58af9; border-color: #c58af9; }
+    .hk-tocdanh:has(input:checked) { color: #34a853; border-color: #34a853; background: rgba(52,168,83,0.1); }
+    .hk-tocchay:has(input:checked) { color: #fbbc05; border-color: #fbbc05; background: rgba(251,188,5,0.1); }
+
+    /* LOẠI TÌM KIẾM */
+    .type-group { display: flex; gap: 12px; }
+    .type-group label {
+      display: inline-flex; align-items: center; gap: 8px; padding: 10px 24px;
+      border-radius: 8px; background: #1a1a1a; border: 1px solid #333; color: #ccc;
+      font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s ease;
+    }
+    .type-group input[type="radio"] { display: none; }
+    .type-group label:hover { background: #252525; border-color: #555; color: #fff; }
+    .type-group label:has(input:checked) { background: rgba(0, 120, 212, 0.15); border-color: #0078d4; color: #4cc2ff; }
+
+    /* CHỌN GÓI GRID (Căn đều full chiều ngang, ÉP VỪA 1 DÒNG) */
+    #sheetGroups { display: grid; grid-template-columns: repeat(auto-fit, minmax(105px, 1fr)); gap: 8px; width: 100%; }
+    .year-group { border: 1px solid #333; border-radius: 8px; padding: 8px; background: #1a1a1a; transition: all 0.2s ease; }
+    .year-group:hover { border-color: #555; background: #222; }
+    
+    .year-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #444; transition: all 0.2s ease; }
+    .year-title { color: #e0e0e0; font-size: 12px; margin: 0; padding: 0; display: flex; align-items: center; gap: 4px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+    .year-title:hover { color: #4cc2ff; }
+    
+    .year-toggle { cursor: pointer; color: #4cc2ff; font-size: 14px; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; border-radius: 4px; transition: transform 0.3s ease; user-select: none; }
+    .year-toggle:hover { background: #333; }
+    
+    .year-grid { display: flex; flex-direction: column; gap: 6px; font-size: 11px; overflow: hidden; max-height: 600px; opacity: 1; transition: max-height 0.3s ease, opacity 0.2s ease; }
+    .year-group.closed .year-grid { max-height: 0; opacity: 0; pointer-events: none; }
+    .year-group.closed .year-header { margin-bottom: 0; padding-bottom: 0; border-bottom-color: transparent; }
+    .year-group.closed .year-toggle { transform: rotate(-90deg); color: #888; }
+    
+    .year-grid label { display: flex; align-items: center; gap: 6px; cursor: pointer; color: #aaa; transition: color 0.2s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .year-grid label:hover { color: #fff; }
+    
+    .year-group input[type="checkbox"] { appearance: none; -webkit-appearance: none; width: 14px; height: 14px; border: 1px solid #666; border-radius: 3px; outline: none; cursor: pointer; position: relative; transition: all 0.2s ease; flex-shrink: 0; background: #111; }
+    .year-group input[type="checkbox"]:hover { border-color: #4cc2ff; }
+    .year-group input[type="checkbox"]:checked { background-color: #0078d4; border-color: #0078d4; }
+    .year-group input[type="checkbox"]:checked::after { content: "✔"; color: white; font-size: 9px; font-weight: bold; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+
+    /* BẢNG KẾT QUẢ (TABLE) */
+    #result { margin-top: 10px; flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+    
+    body.search-mode-active .header-bar, 
+body.search-mode-active .utility-box, 
+body.search-mode-active .help-box, 
+body.search-mode-active .search-main-box, 
+body.search-mode-active .search-section { 
+    display: none !important; 
+}
+    body.search-mode-active .main-content { padding-top: 10px; }
+    body.search-mode-active #result { flex: 1; min-height: 0; }
+
+    .result-shell {
+      background: #202020; border: 1px solid #333; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+      overflow: hidden; display: flex; flex-direction: column; min-height: 0; max-height: 100%;
+    }
+    .result-toolbar {
+      display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 16px;
+      border-bottom: 1px solid #333; background: #252525; position: sticky; top: 0; z-index: 6;
+    }
+    .result-count { font-size: 16px; font-weight: 800; color: #ffffff; }
+    .result-meta { font-size: 12px; color: #888; }
+    
+    .result-reset-btn {
+      padding: 8px 14px; border-radius: 6px; border: 1px solid #444; background: #333;
+      color: #fff; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s ease;
+    }
+    .result-reset-btn:hover { background: #444; border-color: #555; }
+
+    .result-table-wrap { flex: 1; min-height: 0; overflow-y: auto; overflow-x: auto; scroll-behavior: smooth; }
+    .result-table { width: 100%; border-collapse: separate; border-spacing: 0; background: #202020; }
+    .result-table th, .result-table td { padding: 10px 12px; vertical-align: top; text-align: left; border-bottom: 1px solid #333; }
+    .result-table th { position: sticky; top: 0; z-index: 2; background: #2d2d2d; color: #ffffff; font-weight: 700; border-bottom: 1px solid #444; }
+    .result-table td { color: #cccccc; }
+    .result-table tbody tr { transition: background 0.1s; }
+    .result-table tbody tr:hover { background-color: #2a2a2a; cursor: pointer; }
+    
+    .result-table th:nth-child(1), .result-table td:nth-child(1) { width: 10%; }
+    .result-table th:nth-child(2), .result-table td:nth-child(2) { width: 20%; }
+    .result-table th:nth-child(3), .result-table td:nth-child(3) { width: 30%; }
+    .result-table th:nth-child(4), .result-table td:nth-child(4) { width: 40%; }
+
+    .pagination-wrap { display: flex; justify-content: center; padding: 14px 16px 18px; background: #202020; }
+    .pagination { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+    .page-btn {
+      min-width: 36px; height: 36px; padding: 0 10px; border-radius: 6px; border: 1px solid #444;
+      background: #252525; color: #ccc; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s ease;
+    }
+    .page-btn:hover:not(:disabled) { background: #333; border-color: #555; color: #fff; }
+    .page-btn.active { background: #0078d4; border-color: #0078d4; color: #ffffff; }
+    .page-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    .empty-result { padding: 22px 18px; background: #202020; border: 1px solid #333; border-radius: 8px; color: #888; font-style: italic; text-align: center; }
+    #searchSummary { margin-top: 6px; font-size: 13px; color: #888; }
+
+    /* HIGHLIGHTS TRONG BẢNG (Chỉnh lại cho hợp Dark Mode) */
+    .highlight-keyword { background: rgba(255, 215, 0, 0.2); color: #ffd700; font-weight: 600; padding: 0 2px; border-radius: 3px; }
+    .highlight-phrase { background: rgba(76, 194, 255, 0.2); color: #4cc2ff; font-weight: 600; padding: 0 2px; border-radius: 3px; }
+    .hl-batloi { background: #4a1c1c; color: #ff8a8a; padding: 0 2px; border-radius: 3px; font-weight: 600; }
+    .hl-vodich { background: #1c3d5a; color: #8ad4ff; padding: 0 2px; border-radius: 3px; font-weight: 600; }
+    .hl-danhbai { background: #5c1e1e; color: #ff9999; padding: 0 2px; border-radius: 3px; font-weight: 600; }
+    .hl-khang { background: #444; color: #fff; padding: 0 2px; border-radius: 3px; font-weight: 600; }
+    .hl-toc-danh { background: #1a3b5c; color: #8ab4f8; padding: 0 2px; border-radius: 3px; font-weight: 700; }
+    .hl-toc-chay { background: #1e3b20; color: #81c995; padding: 0 2px; border-radius: 3px; font-weight: 700; }
+
+    /* COMPONENT BOXES */
+    .utility-box, .help-box, .search-main-box {
+      margin-bottom: 12px; background: #202020; border: 1px solid #333; border-radius: 8px; overflow: hidden;
+    }
+    .utility-box { padding: 10px 14px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .utility-title { font-weight: 700; color: #e0e0e0; white-space: nowrap; }
+    .utility-links { display: flex; gap: 10px; flex-wrap: wrap; }
+    .utility-links a {
+      text-decoration: none; font-size: 13px; font-weight: 600; color: #4cc2ff; padding: 6px 10px;
+      border-radius: 6px; background: #2d2d2d; border: 1px solid #383838; transition: all 0.2s ease;
+    }
+    .utility-links a:hover { background: #383838; border-color: #555; color: #fff; }
+
+    .help-header, .search-main-header {
+      position: relative; padding: 8px 12px; background: #252525; color: #e0e0e0; font-weight: 700;
+      cursor: pointer; user-select: none; text-align: center; border-bottom: 1px solid transparent; transition: background 0.2s;
+    }
+    .help-header:hover, .search-main-header:hover { background: #2d2d2d; }
+    .help-icon, .search-main-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #888; }
+    .help-title { font-size: 13px; display: inline-block; }
+    
+    .help-content { max-height: 0; overflow: hidden; opacity: 0; padding: 0 12px; font-size: 13px; line-height: 1.6; color: #bbbbbb; background: #202020; transition: all 0.3s ease; }
+    .help-content.open { max-height: 600px; opacity: 1; padding: 12px; border-top: 1px solid #333; }
+    .search-main-content { overflow: hidden; max-height: 1200px; opacity: 1; padding: 16px; transition: all 0.3s ease; }
+    .search-main-content.closed { max-height: 0; opacity: 0; padding-top: 0; padding-bottom: 0; }
+
+    .keyword-suggest { position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: #252525; border: 1px solid #444; border-radius: 8px; max-height: 180px; overflow-y: auto; z-index: 9999; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.5); padding: 4px; }
+    .keyword-suggest div { padding: 8px 12px; font-size: 13px; cursor: pointer; color: #ccc; border-radius: 4px; }
+    .keyword-suggest div:hover { background: #333; color: #fff; }
+    .keyword-suggest div.active { background: #0078d4; color: #ffffff; }
+
+    .empty-result .back-home-btn { margin-top: 12px; }
+    .back-home-btn { padding: 8px 16px; border-radius: 6px; border: 1px solid #0078d4; background: transparent; color: #4cc2ff; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; }
+    .back-home-btn:hover { background: #0078d4; color: #fff; }
+
+    /* ==========================================================================
+       MODERN LOADING OVERLAY (GAMING/SCI-FI STYLE)
+       ========================================================================== */
+    #loadingOverlay {
+      position: fixed; inset: 0; z-index: 99999; display: none; align-items: center; justify-content: center;
+      background: rgba(0, 0, 0, 0.85); /* Nền tối hơn một chút */
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); /* Kính mờ sâu hơn */
+    }
+    
+    .loading-box {
+      width: 360px; padding: 32px 28px; border-radius: 16px;
+      /* Background dốc màu nhẹ để tạo chiều sâu */
+      background: linear-gradient(145deg, #1e1e1e 0%, #111111 100%);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      /* Đổ bóng kép: 1 bóng to tối, 1 ánh sáng hắt nhẹ bên trong */
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      display: flex; flex-direction: column; align-items: center; text-align: center;
+      /* Hiệu ứng nảy lúc hiện ra */
+      animation: popupBounce 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    
+    @keyframes popupBounce {
+      0% { transform: scale(0.9); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    /* Vòng xoay (Spinner) có hiệu ứng Glow */
+    .spinner {
+      width: 48px; height: 48px; border-radius: 50%;
+      border: 3px solid rgba(255, 255, 255, 0.05);
+      border-top-color: #4cc2ff;
+      animation: spin 0.8s cubic-bezier(0.4, 0, 0.2, 1) infinite; 
+      margin-bottom: 20px;
+      box-shadow: 0 0 15px rgba(76, 194, 255, 0.15); /* Hắt sáng xanh */
+    }
+
+    .loading-text { 
+      font-size: 18px; font-weight: 800; color: #ffffff; 
+      margin-bottom: 8px; letter-spacing: 0.5px;
+    }
+    
+    .loading-subtext { 
+      font-size: 13px; color: #888; margin-bottom: 24px; line-height: 1.5; 
+    }
+
+    /* Khu vực thanh chạy */
+    .progress-container { 
+      width: 100%; display: flex; flex-direction: column; gap: 8px; margin-bottom: 28px; 
+    }
+    
+    .loading-progress { 
+      color: #4cc2ff; font-size: 14px; font-weight: 800; 
+      text-shadow: 0 0 8px rgba(76, 194, 255, 0.4); /* Chữ phát sáng */
+    }
+
+    .progress-bar { 
+      width: 100%; height: 6px; 
+      background: rgba(255, 255, 255, 0.06); 
+      border-radius: 8px; overflow: hidden; position: relative; 
+      box-shadow: inset 0 1px 2px rgba(0,0,0,0.5);
+    }
+
+    .progress-fill { 
+      height: 100%; width: 0%; 
+      /* Thanh chạy dốc màu */
+      background: linear-gradient(90deg, #005a9e, #4cc2ff); 
+      border-radius: 8px;
+      transition: width 0.3s ease; 
+      box-shadow: 0 0 10px rgba(76, 194, 255, 0.6); /* Thanh chạy hắt sáng */
+      position: relative;
+    }
+
+    /* Hiệu ứng tia sáng chạy dọc thanh Progress (Shimmer effect) */
+    .progress-fill::after {
+      content: ""; position: absolute; top: 0; left: 0; bottom: 0; width: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+      transform: translateX(-100%);
+      animation: shimmer 1.5s infinite;
+    }
+    
+    @keyframes shimmer { 100% { transform: translateX(100%); } }
+
+    /* Nút Huỷ dạng Ghost Button */
+    .cancel-btn { 
+      padding: 12px 20px; font-size: 13px; font-weight: 600; 
+      background: transparent; 
+      border: 1px solid rgba(255, 107, 107, 0.3); 
+      color: #ff6b6b; border-radius: 8px; cursor: pointer; 
+      transition: all 0.2s ease; width: 100%; letter-spacing: 0.5px;
+    }
+    
+    .cancel-btn:hover { 
+      background: rgba(255, 107, 107, 0.1); 
+      border-color: #ff6b6b; 
+      box-shadow: 0 0 12px rgba(255, 107, 107, 0.2); 
+      color: #ff8a8a;
+    }
+    
+    .cancel-btn:active { transform: scale(0.97); }
+
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    @keyframes popupFade { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+    /* POPUPS & CHAT BOX */
+    .popup-card, .success-box {
+      background: #202020; width: 380px; max-width: calc(100vw - 32px); padding: 20px; border-radius: 12px;
+      border: 1px solid #444; box-shadow: 0 20px 40px rgba(0,0,0,0.6); text-align: center; animation: popupFade 0.2s ease;
+    }
+    .popup-actions { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top: 16px; }
+    .popup-primary, .popup-secondary { padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 13px; border: 1px solid transparent; }
+    .popup-primary { background: #0078d4; color: #ffffff; }
+    .popup-primary:hover { background: #0063b1; }
+    .popup-secondary { background: #333; color: #ccc; border-color: #555; }
+    .popup-secondary:hover { background: #444; color: #fff; }
+
+    .chat-box {
+      position: fixed; bottom: 20px; right: 20px; width: 320px; background: #202020; border: 1px solid #444;
+      border-radius: 12px; box-shadow: 0 12px 30px rgba(0,0,0,0.5); display: none; flex-direction: column; z-index: 100000; animation: popupFade 0.2s ease; overflow: hidden;
+    }
+    .chat-header { padding: 12px 16px; background: #252525; color: #fff; font-weight: 700; font-size: 14px; border-bottom: 1px solid #444; display: flex; justify-content: space-between; align-items: center; }
+    .chat-close { width: 24px; height: 24px; border-radius: 4px; color: #aaa; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+    .chat-close:hover { background: #444; color: #fff; }
+    .chat-body { padding: 16px; }
+    .form-row { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+    .form-row label { font-size: 12px; color: #aaa; }
+    .form-row input, .form-row textarea { padding: 10px; border-radius: 6px; border: 1px solid #444; background: #111; color: #fff; font-size: 13px; }
+    .form-row input:focus, .form-row textarea:focus { outline: none; border-color: #0078d4; }
+    .chat-footer { padding: 12px 16px; background: #252525; border-top: 1px solid #444; }
+    .chat-send { width: 100%; padding: 10px 0; border-radius: 6px; border: none; cursor: pointer; background: #0078d4; color: #ffffff; font-weight: 600; }
+    .chat-send:hover { background: #0063b1; }
+    
+    /* MODAL OVERLAYS */
+    .success-popup, #confirmAllSheets, #packageKeywordPopup, #helpPopup {
+      position: fixed; inset: 0; display: none; align-items: center; justify-content: center; z-index: 200000;
+      background: rgba(0,0,0,0.7); backdrop-filter: blur(2px);
+    }
+    
+    /* Ghi đè màu inline cũ cho các box ở Sidebar */
+    #onlineBox { background: #1a1a1a !important; border: 1px solid #333 !important; color: #aaa !important; }
+    #onlineCount { color: #4cc2ff !important; }
+  
+  /* ==========================================================================
+       NÚT GẠT SÁNG TỐI & LIGHT MODE OVERRIDE
+       ========================================================================== */
+    /* Nút gạt */
+    .theme-switch-wrapper { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 12px; padding: 10px; background: rgba(0,0,0,0.15); border-radius: 8px; transition: 0.3s; }
+    body.light-mode .theme-switch-wrapper { background: rgba(0,0,0,0.05); }
+    .theme-switch { position: relative; display: inline-block; width: 44px; height: 22px; }
+    .theme-switch input { opacity: 0; width: 0; height: 0; }
+    .theme-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 22px; }
+    .theme-slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+    .theme-switch input:checked + .theme-slider { background-color: #0078d4; }
+    .theme-switch input:checked + .theme-slider:before { transform: translateX(22px); }
+    .theme-icon { font-size: 14px; user-select: none; }
+
+    /* Đảo màu sang chế độ sáng */
+    body.light-mode { background-color: #f0f3f5; color: #333; }
+    body.light-mode .sidebar { background: #ffffff; border-right-color: #ddd; }
+    body.light-mode .sidebar-header { border-bottom-color: #ddd; }
+    body.light-mode .logo-text { color: #0078d4; }
+    body.light-mode .toggle-btn { color: #555; }
+    body.light-mode .toggle-btn:hover { background: #eef2f5; color: #000; }
+    body.light-mode .sidebar-item { color: #555; }
+    body.light-mode .sidebar-item:hover { background: #f4f4f4; color: #111; }
+    body.light-mode .sidebar-item.active { background: #e6f3ff; color: #0078d4; box-shadow: inset 3px 0 0 #0078d4; }
+    body.light-mode .sidebar-footer { border-top-color: #ddd; }
+    
+    body.light-mode .search-section { background: #ffffff; border-color: #ddd; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+    body.light-mode .search-box { background: #f9f9f9; border-color: #ccc; }
+    body.light-mode .search-box:focus-within { background: #fff; border-color: #0078d4; }
+    body.light-mode .search-box input[type="text"] { color: #333; }
+    body.light-mode .clear-icon { color: #999; }
+    body.light-mode .clear-icon:hover { color: #333; background: #eee; }
+    body.light-mode .section-label { color: #777; }
+    
+    body.light-mode .hotkey-group label, 
+    body.light-mode .type-group label, 
+    body.light-mode .year-group { background: #f9f9f9; border-color: #ddd; color: #444; }
+    
+    body.light-mode .hotkey-group label:hover, 
+    body.light-mode .type-group label:hover, 
+    body.light-mode .year-group:hover { background: #fff; border-color: #aaa; color: #111; }
+    
+    body.light-mode .year-header { border-bottom-color: #ddd; }
+    body.light-mode .year-title { color: #333; }
+    body.light-mode .year-grid label { color: #555; }
+    body.light-mode .year-grid label:hover { color: #000; }
+    body.light-mode .year-group input[type="checkbox"] { background: #fff; border-color: #aaa; }
+    body.light-mode .year-group input[type="checkbox"]:checked { background: #0078d4; border-color: #0078d4; }
+    
+    body.light-mode .result-shell { background: #ffffff; border-color: #ddd; box-shadow: 0 8px 24px rgba(0,0,0,0.05); }
+    body.light-mode .result-toolbar { background: #f9f9f9; border-bottom-color: #ddd; }
+    body.light-mode .result-count { color: #111; }
+    body.light-mode .result-table { background: #ffffff; }
+    body.light-mode .result-table th { background: #f0f3f5; color: #333; border-bottom-color: #ccc; }
+    body.light-mode .result-table td { color: #444; border-bottom-color: #eee; }
+    body.light-mode .result-table tbody tr:hover { background-color: #f4f8fb; }
+    
+    body.light-mode .page-btn { background: #fff; border-color: #ccc; color: #333; }
+    body.light-mode .page-btn:hover:not(:disabled) { background: #f0f3f5; border-color: #aaa; color: #000; }
+    body.light-mode .page-btn.active { background: #0078d4; border-color: #0078d4; color: #fff; }
+    body.light-mode .pagination-wrap { background: #fff; }
+    body.light-mode .empty-result { background: #f9f9f9; border-color: #ddd; color: #666; }
+    
+    body.light-mode #onlineBox { background: #f9f9f9 !important; border-color: #ddd !important; color: #555 !important; }
+  
+  /* ========================================================================== */
+
+
+  /* ==========================================================================
+       TINH CHỈNH MÀU SẮC NỔI BẬT KHI ĐƯỢC CHỌN (GIAO DIỆN SÁNG)
+       ========================================================================== */
+    
+    /* 1. Nổi bật Loại tìm kiếm */
+    body.light-mode .type-group label:has(input:checked) {
+        background: #e6f3ff;
+        border-color: #0078d4;
+        color: #005a9e;
+        box-shadow: 0 0 0 1px #0078d4;
+    }
+
+    /* 2. Nổi bật các nút Hot Key theo từng màu riêng */
+    body.light-mode .hotkey-group label:has(input:checked) {
+        box-shadow: inset 0 0 0 1px currentColor; 
+        font-weight: 700;
+    }
+    
+    body.light-mode .hk-1hit:has(input:checked) { background: rgba(220, 53, 69, 0.1); color: #c82333; border-color: #c82333; }
+    body.light-mode .hk-mien:has(input:checked) { background: rgba(0, 120, 212, 0.1); color: #005a9e; border-color: #005a9e; }
+    body.light-mode .hk-batloi:has(input:checked) { background: rgba(214, 51, 132, 0.1); color: #c21a69; border-color: #c21a69; }
+    body.light-mode .hk-khang:has(input:checked) { background: rgba(25, 135, 84, 0.1); color: #146c43; border-color: #146c43; }
+    body.light-mode .hk-xuyen:has(input:checked) { background: rgba(253, 126, 20, 0.1); color: #d35400; border-color: #d35400; }
+    body.light-mode .hk-buff:has(input:checked) { background: rgba(255, 193, 7, 0.2); color: #997404; border-color: #d39e00; }
+    body.light-mode .hk-nhay:has(input:checked) { background: rgba(111, 66, 193, 0.1); color: #59339d; border-color: #59339d; }
+    body.light-mode .hk-tocdanh:has(input:checked) { background: rgba(25, 135, 84, 0.1); color: #146c43; border-color: #146c43; }
+    body.light-mode .hk-tocchay:has(input:checked) { background: rgba(253, 126, 20, 0.1); color: #d35400; border-color: #d35400; }
+
+  /* ==========================================================================
+       TIÊU ĐỀ CHÀO MỪNG & LOGO (CÙNG 1 VÙNG)
+       ========================================================================== */
+    /* ==========================================================================
+       TIÊU ĐỀ CHÀO MỪNG & LOGO (CHỮ CĂN GIỮA, LOGO BÊN PHẢI)
+       ========================================================================== */
+    .welcome-header {
+      position: relative; /* Bắt buộc để căn logo góc phải */
+      display: flex;
+      align-items: center;
+      justify-content: center; /* Đẩy cụm chữ vào chính giữa */
+      margin-bottom: 20px;
+      padding: 16px 90px; /* Thêm khoảng trống 2 bên để chữ không đè vào logo */
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      animation: popupFade 0.5s ease;
+    }
+
+    /* ==========================================================================
+   THANH TÀI KHOẢN ĐĂNG NHẬP
+   ========================================================================== */
+/* ==========================================================================
+   TÀI KHOẢN TRONG SIDEBAR
+   ========================================================================== */
+.sidebar-account-header {
+  display: none;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0 8px 10px;
+  padding: 12px;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+}
+
+.sidebar-account-greeting {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.sidebar-account-icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.sidebar-account-info {
+  min-width: 0;
+}
+
+.sidebar-account-info span {
+  display: block;
+  color: #4cc2ff;
+  font-size: 12px;
+  font-weight: 800;
+  word-break: break-all;
+  margin-top: 2px;
+}
+
+.sidebar-logout-btn {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,107,107,0.35);
+  background: rgba(255,107,107,0.08);
+  color: #ff8a8a;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.sidebar-logout-btn:hover {
+  background: rgba(255,107,107,0.18);
+  border-color: #ff6b6b;
+  color: #ffffff;
+}
+
+.sidebar.collapsed .sidebar-account-header {
+  display: none !important;
+}
+
+body.light-mode .sidebar-account-header {
+  background: #f9f9f9;
+  border-color: #ddd;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+body.light-mode .sidebar-account-greeting {
+  color: #222;
+}
+
+body.light-mode .sidebar-account-info span {
+  color: #0078d4;
+}
+
+/* kết thúc */
+
+    .welcome-text {
+      text-align: center; /* Căn giữa 2 dòng chữ với nhau */
+    }
+
+    /* Các hiệu ứng chữ giữ nguyên... */
+    .welcome-title {
+      font-size: 20px;
+      font-weight: 800;
+      margin: 0 0 6px 0;
+      letter-spacing: 0.5px;
+      animation: rgbGlow 5s infinite linear;
+    }
+
+    .welcome-subtitle {
+      font-size: 13px;
+      color: #aaaaaa;
+      margin: 0;
+      font-weight: 500;
+      font-style: italic;
+    }
+
+    /* Căn chỉnh Logo lơ lửng bên phải */
+    .welcome-logo {
+      position: absolute; /* Đặt logo nổi độc lập */
+      right: 24px; /* Cách mép phải 24px */
+      top: 50%; /* Đẩy xuống giữa bảng */
+      transform: translateY(-50%); /* Căn chuẩn giữa theo chiều dọc */
+      height: 55px; 
+      width: auto;
+      object-fit: contain;
+      border-radius: 8px;
+      box-shadow: 0 0 15px rgba(0, 120, 212, 0.4);
+      transition: transform 0.3s ease;
+    }
+    
+    .welcome-logo:hover {
+      transform: translateY(-50%) scale(1.1); /* Phóng to mà không bị lệch vị trí */
+    }
+
+    /* Hiệu ứng đổi màu RGB cho Dark Mode */
+    @keyframes rgbGlow {
+      0% { color: #4cc2ff; text-shadow: 0 0 8px rgba(76, 194, 255, 0.4); }
+      33% { color: #ff6b6b; text-shadow: 0 0 8px rgba(255, 107, 107, 0.4); }
+      66% { color: #fadd60; text-shadow: 0 0 8px rgba(250, 221, 96, 0.4); }
+      100% { color: #4cc2ff; text-shadow: 0 0 8px rgba(76, 194, 255, 0.4); }
+    }
+
+    /* Giao diện sáng (Light Mode) */
+    @keyframes rgbGlowLight {
+      0% { color: #005a9e; }
+      33% { color: #c82333; }
+      66% { color: #b58500; }
+      100% { color: #005a9e; }
+    }
+
+    body.light-mode .welcome-header { background: #f9f9f9; border-color: #ddd; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+    body.light-mode .welcome-title { animation: rgbGlowLight 5s infinite linear; }
+    body.light-mode .welcome-subtitle { color: #666666; }
+    body.light-mode .welcome-logo { box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15); }
+
+  /* ==========================================================================
+       GIAO DIỆN BẢNG LỌC MỚI (GRID GỘP HOTKEY & LOẠI)
+       ========================================================================== */
+    .filter-board {
+      display: grid;
+      grid-template-columns: auto 1fr auto; /* 3 cột: Trái (Trang bị) - Giữa (Skill) - Phải (Tốc độ) */
+      grid-template-rows: auto auto;        /* 2 hàng */
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    /* Định dạng chung cho các nút Kỹ Năng, Chỉ Số, Trang Bị */
+    .type-btn {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      border-radius: 8px; background: #1a1a1a; border: 1px solid #333;
+      color: #ccc; font-weight: 600; cursor: pointer; transition: all 0.2s ease;
+      user-select: none;
+    }
+    .type-btn input[type="radio"] { display: none; }
+    .type-btn:hover { background: #252525; border-color: #555; color: #fff; }
+    .type-btn:has(input:checked) { 
+      background: rgba(0, 120, 212, 0.15); border-color: #0078d4; color: #4cc2ff; 
+      box-shadow: inset 0 0 0 1px #0078d4; 
+    }
+
+    /* Giao diện sáng (Light mode) cho các nút mới */
+    body.light-mode .type-btn { background: #f9f9f9; border-color: #ddd; color: #444; }
+    body.light-mode .type-btn:hover { background: #fff; border-color: #aaa; color: #111; }
+    body.light-mode .type-btn:has(input:checked) { 
+      background: #e6f3ff; border-color: #0078d4; color: #005a9e; box-shadow: 0 0 0 1px #0078d4; 
+    }
+
+    /* Phân bổ vị trí từng khối trên Grid */
+    .fb-trangbi { 
+      grid-column: 1; grid-row: 1 / span 2; /* Chiếm cột 1, trải dài 2 hàng */
+      flex-direction: column; padding: 0 36px; font-size: 16px; 
+    }
+    .fb-trangbi span.icon { font-size: 28px; margin-bottom: 6px; }
+
+    .fb-std-hotkeys { grid-column: 2; grid-row: 1; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+    .fb-kynang { grid-column: 2; grid-row: 2; font-size: 15px; padding: 12px 0; letter-spacing: 1px; }
+
+    .fb-speed-hotkeys { grid-column: 3; grid-row: 1; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+    .fb-chiso { grid-column: 3; grid-row: 2; font-size: 15px; padding: 12px 0; }
+
+    /* ==========================================================================
+       TỐI ƯU HÓA HIỆU ỨNG (PERFORMANCE & TACTILE FEEDBACK)
+       ========================================================================== */
+    
+    /* 1. Tối ưu Transition: Chỉ dùng các thuộc tính GPU có thể tăng tốc, bỏ 'all' */
+    .type-btn, .hotkey-group label, .page-btn, .search-btn, .year-group, .sidebar-item {
+        transition: background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1), 
+                    border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1), 
+                    color 0.25s cubic-bezier(0.4, 0, 0.2, 1), 
+                    box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+                    transform 0.15s ease,
+                    opacity 0.25s ease !important;
+        will-change: transform, opacity, background-color; /* Gợi ý GPU xử lý trước */
+    }
+
+    /* 2. Hiệu ứng 'Lún' (Scale) khi người dùng Click chuột (Tactile Feedback) */
+    .type-btn:active, .hotkey-group label:active, .page-btn:active:not(:disabled), .search-btn:active, .result-reset-btn:active {
+        transform: scale(0.96);
+    }
+    
+    /* 3. Class dùng để Khóa Hotkey mượt mà (Thay thế cho JS nội tuyến) */
+    .hotkey-group label.locked-ui {
+        opacity: 0.2;
+        pointer-events: none;
+        filter: grayscale(100%); /* Làm xám các icon bị khóa để tăng tính thị giác */
+    }
+
+
+  </style>
+</head>
+
+<body>
+<div class="app-container">
+
+  <aside class="sidebar" id="appSidebar">
+    <div class="sidebar-header">
+      <button class="toggle-btn" onclick="toggleSidebar()">☰</button>
+      <span class="logo-text">VLCM 2026</span>
+    </div>
+    
+    <div class="sidebar-menu">
+
+  <div id="accountHeader" class="sidebar-account-header">
+    <div class="sidebar-account-greeting">
+      <div class="sidebar-account-icon">👋</div>
+      <div class="sidebar-account-info">
+        <div>Chào bạn</div>
+        <span id="accountEmailText"></span>
+      </div>
+    </div>
+    <button type="button" class="sidebar-logout-btn" onclick="logoutAccount()">Đăng xuất</button>
+  </div>
+
+  <div class="sidebar-item active" id="homeMenuBtn" onclick="goHome()">
+    <span class="sidebar-icon">🏠</span><span class="sidebar-text">Trang chủ</span>
+  </div>
+
+      <div class="menu-group-title">Build Account</div>
+      <div class="sidebar-item disabled" onclick="showBuildComingSoon()"><span class="sidebar-icon">⚔️</span><span class="sidebar-text">Build acc PK</span></div>
+      <div class="sidebar-item disabled" onclick="showBuildComingSoon()"><span class="sidebar-icon">🧬</span><span class="sidebar-text">Build acc Clone</span></div>
+      <div class="sidebar-item disabled" onclick="showBuildComingSoon()"><span class="sidebar-icon">💥</span><span class="sidebar-text">Build acc Lực Chiến</span></div>
+      <div class="sidebar-item disabled" onclick="showBuildComingSoon()"><span class="sidebar-icon">⚡</span><span class="sidebar-text">Build acc Tốc Đánh</span></div>
+      <div class="sidebar-item disabled" onclick="showBuildComingSoon()"><span class="sidebar-icon">🏰</span><span class="sidebar-text">Build acc Phó Bản</span></div>
+      <div class="sidebar-item disabled" onclick="showBuildComingSoon()"><span class="sidebar-icon">🧠</span><span class="sidebar-text">Build acc Train</span></div>
+      
+
+
+
+      <div class="menu-group-title">Hỗ trợ & Menu Khác</div>
+      <div class="sidebar-item" onclick="setActiveSidebar(this); openHelpPopup()">
+        <span class="sidebar-icon">❓</span><span class="sidebar-text">Trợ giúp</span>
+      </div>
+      <div class="sidebar-item" onclick="setActiveSidebar(this); openContact()">
+        <span class="sidebar-icon">📞</span><span class="sidebar-text">Liên Hệ</span>
+      </div>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="theme-switch-wrapper">
+        <span class="theme-icon">☀️</span>
+        <label class="theme-switch">
+          <input type="checkbox" id="themeToggle" onchange="toggleTheme()" checked>
+          <span class="theme-slider"></span>
+        </label>
+        <span class="theme-icon">🌙</span>
+      </div>
+      <div id="onlineBox" style="border-radius:8px; padding:12px; font-size:12px; text-align:center;">
+        👥 Trực tuyến: <strong id="onlineCount">...</strong><br>
+        📊 Tổng truy cập: <strong id="totalCount">...</strong>
+      </div>
+      <div style="text-align: center; margin-top: 5px;">
+        <img src="https://i.imgur.com/ea3coLO.jpeg" alt="QR Donate" style="width: 100px; border-radius: 8px; border: 1px solid #444; margin-bottom: 8px; opacity: 0.9;">
+        <div style="font-size: 11px; color: #777; line-height: 1.4;">Cảm ơn bạn đã donate<br>ủng hộ tác giả! ☕</div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <div class="welcome-header">
+      <div class="welcome-text">
+        <h1 class="welcome-title">Chào mừng bạn đến với trang dành riêng cho cộng đồng yêu game Võ Lâm Chi Mộng</h1>
+        <p class="welcome-subtitle">Công cụ hỗ trợ game thủ tìm kiếm trang bị, vật phẩm tốt nhất 2026</p>
+      </div>
+      <img class="welcome-logo" src="https://st.download.com.vn/data/image/2023/10/03/vo-lam-chi-mong-700.jpg" alt="Logo VLCM">
+    </div>
+    <div class="search-section">
+      
+      <div class="search-row">
+        <div class="search-box">
+          <span class="search-icon-left">🔍</span>
+          <input type="text" id="keyword" placeholder="Nhập từ khóa cần tìm: đánh bại, tốc đánh, miễn sát thương..." onkeydown="if(event.key==='Enter')startSearch()">
+          <div id="keywordSuggest" class="keyword-suggest"></div>
+          <span class="clear-icon" onclick="document.getElementById('keyword').value=''; document.getElementById('keyword').focus();">✕</span>
+        </div>
+        <button class="search-btn" onclick="startSearch()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          Tìm kiếm
+        </button>
+      </div>
+
+      <div id="searchHintBar" class="search-hint-bar">
+        <div>💡 <strong>Gợi ý:</strong> Bạn đã chọn Gói. Hãy nhập từ khóa hoặc dùng *.</div>
+        <div class="hint-btn" onclick="applyStarSuggestion()">Dùng *</div>
+      </div>
+
+      <div class="filter-board">
+        
+        <label class="type-btn fb-trangbi">
+          <input type="radio" name="searchType" value="Trang Bị" checked>
+          <span class="icon">🎒</span>
+          Trang Bị
+        </label>
+
+        <div class="fb-std-hotkeys hotkey-group">
+          <label class="hk-1hit"><input type="checkbox" class="common-kw" value="đánh bại, hạ gục"> 💥 1 hit</label>
+          <label class="hk-mien"><input type="checkbox" class="common-kw" value="miễn dịch 100%, miễn dịch hiệu quả, miễn dịch toàn bộ"> 🛡️ Miễn sát thương</label>
+          <label class="hk-batloi"><input type="checkbox" class="phrase-kw" value="BAT_LOI"> 🎯 Bất lợi</label>
+          <label class="hk-khang"><input type="checkbox" class="common-kw" value="kháng 100%"> 🔰 Kháng</label>
+          <label class="hk-xuyen"><input type="checkbox" class="phrase-kw" value="bo qua.*vo dich"> 🗡️ Xuyên vô địch</label>
+          <label class="hk-buff"><input type="checkbox" class="phrase-kw" value="BUFF_TAY"> ⭐ Buff tay</label>
+          <label class="hk-nhay"><input type="checkbox" class="phrase-kw" value="NHAY_LAN"> 🤸 Nhảy lấn</label>
+        </div>
+
+        <label class="type-btn fb-kynang">
+          <input type="radio" name="searchType" value="Kỹ năng"> 📖 Kỹ Năng
+        </label>
+
+        <div class="fb-speed-hotkeys hotkey-group">
+          <label class="hk-tocdanh"><input type="checkbox" class="common-kw speed-kw" value="tốc đánh, tốc độ đánh"> ⚡ Tốc Đánh</label>
+          <label class="hk-tocchay"><input type="checkbox" class="common-kw speed-kw" value="tốc chạy, tốc độ chạy"> 🏃 Tốc Chạy</label>
+        </div>
+
+        <label class="type-btn fb-chiso">
+          <input type="radio" name="searchType" value="Chỉ số"> 📊 Chỉ Số
+        </label>
+
+      </div>
+
+      <div class="filter-row">
+        <label class="section-label">Chọn Gói</label>
+        <div id="sheetGroups"></div>
+      </div>
+      
+    </div>
+
+    <div id="searchSummary"></div>
+    <div id="result"></div>
+    <div id="pagination"></div>
+
+  </main>
+</div>
+
+<div id="loadingOverlay">
+  <div class="loading-box">
+    <div class="spinner" id="loadingSpinner"></div>
+    
+    <div class="loading-text" id="loadingText">Đang tìm kiếm...</div>
+    <div class="loading-subtext">Vui lòng chờ hệ thống xử lý dữ liệu. Quá trình này có thể mất vài giây.</div>
+    
+    <div class="progress-container">
+      <div style="display: flex; justify-content: space-between; align-items: flex-end; padding: 0 4px;">
+        <span style="font-size: 11px; color: #888; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Đang tìm...</span>
+        <span class="loading-progress" id="loadingProgress">0%</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+    </div>
+    
+    <button class="cancel-btn" onclick="cancelSearch()">✕ Huỷ tìm kiếm</button>
+  </div>
+</div>
+
+<div id="chatBox" class="chat-box">
+  <div class="chat-header">Gửi yêu cầu hỗ trợ <span class="chat-close" onclick="closeChat()">✕</span></div>
+  <div class="chat-body">
+    <div class="form-row"><label>Tên bạn là:</label><input id="contactName" type="text" placeholder="Tên của bạn"></div>
+    <div class="form-row"><label>SĐT bạn là:</label><input id="contactPhone" type="text" placeholder="Số điện thoại"></div>
+    <div class="form-row"><label>Nội dung hỗ trợ:</label><textarea id="contactMessage" rows="3" placeholder="Mô tả vấn đề..."></textarea></div>
+  </div>
+  <div class="chat-footer">
+    <button class="chat-send" id="sendBtn" onclick="sendContactForm()">Gửi yêu cầu</button>
+  </div>
+</div>
+
+<div id="successPopup" class="success-popup">
+  <div class="success-box">
+    <div style="font-size: 38px; margin-bottom: 10px;">✅</div>
+    <div style="color: #fff; font-size: 15px; margin-bottom: 16px;"><strong>Đã gửi thành công!</strong><br><span style="color:#aaa; font-size: 13px;">Chúng tôi sẽ liên hệ sớm.</span></div>
+    <button class="popup-primary" onclick="closeSuccessPopup()">Đóng</button>
+  </div>
+</div>
+
+<div id="modernAlert" style="position: fixed; inset: 0; display: none; align-items: center; justify-content: center; z-index: 300000; background: rgba(0,0,0,0.5);">
+  <div style="background: #252525; padding: 14px 20px; border-radius: 8px; border: 1px solid #444; font-weight: 600; color: #fff; animation: popupFade 0.2s ease;">
+    <span id="modernAlertText"></span>
+  </div>
+</div>
+
+<div id="confirmAllSheets" class="success-popup">
+  <div class="popup-card">
+    <div style="font-size:32px;margin-bottom:6px">⚠️</div>
+    <div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:8px;">Bạn chưa chọn gói</div>
+    <div style="font-size:13px;color:#aaa;line-height:1.5;">Bạn có chắc muốn <strong>tìm kiếm trong TẤT CẢ các gói</strong> không? Việc này có thể mất thời gian.</div>
+    <div class="popup-actions">
+      <button onclick="cancelSelectAllSheets()" class="popup-secondary">Huỷ</button>
+      <button onclick="confirmSelectAllSheets()" class="popup-primary">Tìm Tất Cả</button>
+    </div>
+  </div>
+</div>
+
+<div id="packageKeywordPopup" class="success-popup">
+  <div class="popup-card">
+    <div style="font-size:30px;margin-bottom:6px">🔎</div>
+    <div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:8px;">Thiếu điều kiện tìm kiếm</div>
+    <div style="font-size:13px;color:#aaa;line-height:1.5;">Bạn đã chọn gói nhưng chưa nhập từ khóa.<br>Hãy chọn một cách để tiếp tục.</div>
+    <div class="popup-actions">
+      <button onclick="searchAllWithStar()" class="popup-primary">Dùng * Tìm Tất Cả</button>
+      <button onclick="focusKeywordInput()" class="popup-secondary">Nhập từ khóa</button>
+    </div>
+  </div>
+</div>
+
+<div id="helpPopup" class="success-popup">
+  <div class="popup-card" style="width: 500px; text-align: left;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom: 1px solid #444; padding-bottom: 10px;">
+      <strong style="font-size:15px; color:#fff">❓ Hướng dẫn sử dụng</strong>
+      <span style="cursor:pointer; font-size:18px; color: #aaa;" onclick="closeHelpPopup()">✕</span>
+    </div>
+    <div style="font-size:13px; line-height:1.6; color:#bbb">
+      <p><strong>Cách tìm kiếm:</strong></p>
+      <p>1. Gõ từ khóa vào ô tìm kiếm (dùng dấu phẩy hoặc *** để ngăn cách).</p>
+      <p>2. Hoặc nhấp chọn các HOT KEY có sẵn.</p>
+      <p>3. Chọn Gói Năm cần tìm (có thể mở rộng mũi tên để chọn chi tiết).</p>
+      <p>4. Bấm Enter hoặc Icon Kính lúp.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+// ==========================================================================
+// JS LOGIC & UI TƯƠNG TÁC
+// ==========================================================================
+function toggleSidebar() { document.getElementById('appSidebar').classList.toggle('collapsed'); }
+
+function setActiveSidebar(el) {
+  if (!el || el.classList.contains("disabled")) return;
+  document.querySelectorAll(".sidebar-item").forEach(item => item.classList.remove("active"));
+  el.classList.add("active");
+}
+
+function goHome() {
+  // 1. XÓA BỘ NHỚ ĐỆM CACHE (Giúp cập nhật data mới nhất từ Sheet)
+  sessionStorage.clear();
+
+  // 2. Thoát chế độ xem kết quả (hiện lại bảng tìm kiếm)
+  exitSearchMode();
+  
+  // 3. Xóa dữ liệu kết quả cũ
+  allSearchResults = []; 
+  currentPage = 1;
+  document.getElementById("result").innerHTML = ""; 
+  document.getElementById("pagination").innerHTML = "";
+  document.getElementById("searchSummary").innerHTML = ""; 
+  
+  // 4. Reset từ khóa text
+  const kwInput = document.getElementById("keyword");
+  if (kwInput) {
+      kwInput.value = "";
+      kwInput.readOnly = false;
+      kwInput.placeholder = "Nhập từ khóa cần tìm: đánh bại, tốc đánh, miễn sát thương...";
+  }
+  
+  // 5. Bỏ tick toàn bộ Hot Key và chuyển Loại tìm kiếm về mặc định
+  resetKeywordAndType();
+  
+  // 6. BỎ TICK CHỌN TOÀN BỘ GÓI (Reset hoàn toàn)
+  document.querySelectorAll("#sheetGroups input[type='checkbox']").forEach(cb => {
+      cb.checked = false;
+  });
+  
+  // 7. Đóng các popup hoặc hiệu ứng đang tải
+  hideLoading(); 
+  hidePackageKeywordPopup(); 
+  hideConfirmAllSheets();
+  closeChat(); 
+  closeHelpPopup();
+  
+  // 8. Cập nhật lại UI Sidebar và cuộn lên đầu trang
+  document.querySelectorAll(".sidebar-item").forEach(item => item.classList.remove("active"));
+  const homeBtn = document.getElementById("homeMenuBtn"); 
+  if (homeBtn) homeBtn.classList.add("active");
+  
+  refreshSearchHintBar();
+  document.querySelector('.main-content').scrollTo({ top: 0, behavior: "smooth" });
+}
+
+let activeSuggestIndex = -1; let currentSearchToken = null; let isSearchCanceled = false; let loadingTimeout = null;
+let allSearchResults = []; let currentPage = 1; const RESULTS_PER_PAGE = 20; let pendingSearchAfterConfirm = false;
+
+// ==========================================================================
+// HÀM TÁI TẠO CHỈ SỐ: KIỂM SOÁT NGHIÊM NGẶT GIÁ TRỊ TỐI ĐA
+// ==========================================================================
+// Thêm tham số searchType vào hàm
+function formatAllStats(text, searchType) {
+    if (!text || typeof text !== 'string') return text;
+
+    // 1. LÀM SẠCH TEXT
+    let cleanText = text.replace(/<[^>]*>/g, '').replace(/[\n\t]/g, ' ').replace(/\s+/g, ' ');
+    
+    // 2. TỪ ĐIỂN
+    const statRegex = /(Sát thương Bạo Kích|Thanh Long Chiến|Huyền Vũ Chiến|Chu Tước Chiến|Bạch Hổ Chiến|Giảm Sát Thương Bạo Kích|Giảm Sát Thương Ám Khí|Tăng Sát Thương Bạo Kích|Sát Thương Kỹ Năng|Sát Thương Bạo|Xuyên Hộ Giáp|Giảm Sát Thương|Tăng Sát Thương|Miễn Sát Thương|Phản Sát Thương|Kháng Tất Cả|Kháng Cung Tiễn|Kháng Đao Kiếm|Kháng Thương Mâu|Kháng Ám Khí|Tốc Độ Đánh|Tốc Độ Chạy|Công Kích|Tấn Công|Phòng Thủ|Sinh Lực|Nội Lực|Thể Lực|Chân Khí|Tốc Đánh|Tốc Chạy|Bạo Kích|Né Tránh|Tất Sát|Kháng Bạo|Chính Xác|Hóa Giải|Võ Công|Nội Công|Võ Phòng|Nội Phòng|Lực Chiến|Độc Công|Ám Khí|Bỏ Qua|Sát Thương|Kháng)/gi;
+    
+    let statNames = cleanText.match(statRegex) || [];
+    let numsMatches = cleanText.match(/-?[\d\.\,]+%?/g) || [];
+    
+    // UI DỰ PHÒNG CHUNG
+    const rawFallbackUI = `
+        <details style="cursor: pointer; opacity: 0.9;">
+            <summary style="font-size: 13px; color: #4cc2ff; outline: none; font-weight: 600;">👉 Vui lòng xem bản gốc</summary>
+            <div style="font-size: 11.5px; opacity: 0.7; margin-top: 8px; padding-left: 8px; border-left: 2px solid rgba(128,128,128,0.5); line-height: 1.5;">
+                ${text.replace(/\n/g, '<br>')}
+            </div>
+        </details>
+    `;
+
+    // Lấy theo số lượng dài nhất (để không bỏ sót nếu tên và số bị lệch nhau)
+    const maxCount = Math.max(statNames.length, numsMatches.length);
+    if (maxCount === 0) return rawFallbackUI;
+
+    let highlightedStats = []; 
+    let otherStats = [];       
+    let hasMatchedStat = false;
+
+    const isSpeedMode = (searchType === 'Chỉ số');
+    const isSkillMode = (searchType === 'Kỹ năng');
+    const isEquipMode = (searchType === 'Trang Bị' || !searchType); 
+
+    // 3. QUYẾT ĐỊNH HIỂN THỊ
+    for (let i = 0; i < maxCount; i++) {
+        let statName = statNames[i] || "";
+        let statValue = numsMatches[i] || "";
+        
+        let numericValue = statValue ? parseFloat(statValue.replace(/[\.\,%]/g, '')) : NaN;
+        let lowerName = statName.toLowerCase();
+        
+        let isHighlighted = false;
+        let displayItem = "";
+        let priority = 99; 
+
+        // Các chỉ số VIP (Chỉ lọc ra khi CẢ TÊN VÀ SỐ đều hợp lệ, không bị rớt)
+        if (statName && statValue && !isNaN(numericValue) && numericValue !== 0) {
+            // TỐC ĐÁNH
+            if (lowerName.includes('tốc đánh') || lowerName.includes('tốc độ đánh')) {
+                if ((isSpeedMode || isEquipMode) && numericValue <= 300000) { 
+                    displayItem = `<span style="color:#4cc2ff; font-weight:800;">⚡ +${statValue} Tốc Đánh</span>`;
+                    priority = 1; isHighlighted = true; hasMatchedStat = true;
+                }
+            } 
+            // TỐC CHẠY
+            else if (lowerName.includes('tốc chạy') || lowerName.includes('tốc độ chạy')) {
+                if ((isSpeedMode || isEquipMode) && numericValue <= 30) { 
+                    displayItem = `<span style="color:#81c995; font-weight:800;">🏃 +${statValue} Tốc Chạy</span>`;
+                    priority = 2; isHighlighted = true; hasMatchedStat = true;
+                }
+            }
+            // ST BẠO KÍCH
+            else if (lowerName.includes('sát thương bạo')) {
+                if (isSkillMode || isEquipMode) {
+                    displayItem = `<span style="color:#ff4757; font-weight:800;">🔥 +${statValue} ST Bạo Kích</span>`;
+                    priority = 3; isHighlighted = true; hasMatchedStat = true;
+                }
+            }
+            // VÕ CÔNG
+            else if (lowerName.includes('võ công')) {
+                if (isSkillMode || isEquipMode) { 
+                    displayItem = `<span style="color:#ff8a8a; font-weight:800;">⚔️ +${statValue} Võ Công</span>`;
+                    priority = 4; isHighlighted = true; hasMatchedStat = true;
+                }
+            }
+            // LỰC CHIẾN
+            else if (lowerName.includes('lực chiến')) {
+                if (isSkillMode || isEquipMode) { 
+                    displayItem = `<span style="color:#ff9f43; font-weight:800;">💥 +${statValue} Lực Chiến</span>`;
+                    priority = 5; isHighlighted = true; hasMatchedStat = true;
+                }
+            }
+        }
+
+        // Tách luồng dữ liệu
+        if (isHighlighted) {
+            highlightedStats.push({ html: displayItem, priority: priority });
+        } else {
+            // Đưa vào nhóm Thường để chuẩn bị Kẻ bảng ngang
+            otherStats.push({ name: statName, value: statValue });
+        }
+    }
+    
+    // 4. RENDER HTML
+    highlightedStats.sort((a, b) => a.priority - b.priority);
+    let finalHtml = "";
+
+    // Render nhóm VIP (Dạng danh sách nổi bật)
+    if (hasMatchedStat) {
+        let resultArr = highlightedStats.map(item => item.html);
+        finalHtml += `
+            <div style="display:flex; flex-direction:column; gap:6px; font-size:14px; margin-bottom:6px;">
+                ${resultArr.join('')}
+            </div>
+        `;
+    }
+
+    // Render nhóm THƯỜNG (Kẻ Bảng Nằm Ngang)
+    if (otherStats.length > 0) {
+        // Hàng trên (Tên)
+        let thHtml = otherStats.map(s => `
+            <th style="padding: 6px 10px; border: 1px solid rgba(128,128,128,0.25); text-align: center; white-space: nowrap; font-size: 11px; opacity: 0.8; font-weight: normal;">
+                ${s.name || '<span style="opacity:0.3; font-style:italic;">Trống</span>'}
+            </th>
+        `).join('');
+        
+        // Hàng dưới (Số)
+        let tdHtml = otherStats.map(s => {
+            let displayVal = s.value ? (s.value.startsWith('-') ? s.value : '+' + s.value) : '<span style="opacity:0.3">-</span>';
+            return `
+                <td style="padding: 6px 10px; border: 1px solid rgba(128,128,128,0.25); text-align: center; white-space: nowrap; font-size: 12.5px; font-weight: 600; color: #4cc2ff;">
+                    ${displayVal}
+                </td>
+            `;
+        }).join('');
+
+        // Khung Bảng (có scroll ngang mượt mà nếu quá dài)
+        let tableBox = `
+            <div style="margin-top: 6px; overflow-x: auto; background: rgba(0,0,0,0.15); border-radius: 6px; border: 1px solid rgba(128,128,128,0.2);">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background: rgba(128,128,128,0.1);">${thHtml}</tr>
+                    </thead>
+                    <tbody>
+                        <tr>${tdHtml}</tr>
+                    </tbody>
+                </table>
+            </div>
+        `;
+
+        if (hasMatchedStat) {
+            finalHtml += `
+                <details style="cursor: pointer; opacity: 0.9; margin-top: 8px;">
+                    <summary style="font-size: 11.5px; opacity: 0.7; outline: none; transition: 0.2s;">
+                        👉 <i>Xem thêm chỉ số khác (Bảng)</i>
+                    </summary>
+                    ${tableBox}
+                </details>
+            `;
+        } else {
+            finalHtml += `
+                <div style="margin-bottom: 4px; font-size: 13px; color: #4cc2ff; font-weight: 600;">
+                    📋 Bảng chi tiết chỉ số:
+                </div>
+                ${tableBox}
+            `;
+        }
+    }
+
+    return finalHtml || rawFallbackUI;
+}
+
+function refreshSearchHintBar() {
+  const keywordInput = document.getElementById("keyword"); const hintBar = document.getElementById("searchHintBar");
+  const anyPackageChecked = [...document.querySelectorAll("#sheetGroups input[type='checkbox']:checked")].some(cb => !cb.classList.contains("year-check"));
+  const anyHotKeyChecked = [...document.querySelectorAll(".common-kw:checked, .phrase-kw:checked")].length > 0;
+  const hasKeyword = !!(keywordInput && keywordInput.value.trim());
+  if (hintBar) hintBar.classList.toggle("show", anyPackageChecked && !anyHotKeyChecked && !hasKeyword);
+}
+
+function applyStarSuggestion() {
+  const kw = document.getElementById("keyword"); if (!kw) return;
+  kw.value = "*"; refreshSearchHintBar(); kw.focus();
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  // --- THÊM DÒNG NÀY VÀO ĐÂY ---
+  sessionStorage.clear(); // Đảm bảo khi nhấn F5 (Làm mới) là xóa sạch bộ nhớ tạm của trình duyệt
+  
+  const kw = document.getElementById("keyword"); 
+  const sug = document.getElementById("keywordSuggest");
+  if (!kw || !sug) return;
+  
+  function updateActiveSuggest() {
+    const items = sug.querySelectorAll("div");
+    items.forEach((el, idx) => el.classList.toggle("active", idx === activeSuggestIndex));
+  }
+
+  let suggestTimeout = null; // Biến lưu trữ thời gian chờ
+  kw.addEventListener("input", () => {
+    activeSuggestIndex = -1; refreshSearchHintBar();
+    
+    // Hủy lệnh quét cũ nếu người dùng vẫn đang tiếp tục gõ
+    clearTimeout(suggestTimeout);
+    
+    // Đợi 150ms sau khi người dùng ngừng gõ mới bắt đầu quét gợi ý
+    suggestTimeout = setTimeout(() => {
+        const val = kw.value.trim().toLowerCase();
+        if (!val) { sug.style.display = "none"; return; }
+        const merged = [...new Set([...getUserKeywords(), ...DEFAULT_KEYWORDS])];
+        const matches = merged.filter(k => k.toLowerCase().includes(val));
+        
+        if (!matches.length) { sug.style.display = "none"; return; }
+        sug.innerHTML = matches.slice(0, 10).map(k => `<div>${k}</div>`).join("");
+        sug.style.display = "block";
+    }, 150);
+  });
+
+  sug.addEventListener("click", e => {
+    if (e.target.tagName !== "DIV") return;
+    kw.value = e.target.textContent; sug.style.display = "none";
+    activeSuggestIndex = -1; refreshSearchHintBar(); kw.focus();
+  });
+
+  kw.addEventListener("keydown", e => {
+    const items = sug.querySelectorAll("div");
+    if (!items.length || sug.style.display === "none") return;
+    if (e.key === "ArrowDown") { e.preventDefault(); activeSuggestIndex = (activeSuggestIndex + 1) % items.length; updateActiveSuggest(); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); activeSuggestIndex = (activeSuggestIndex - 1 + items.length) % items.length; updateActiveSuggest(); }
+    else if (e.key === "Enter" && activeSuggestIndex >= 0) { e.preventDefault(); kw.value = items[activeSuggestIndex].textContent; sug.style.display = "none"; activeSuggestIndex = -1; refreshSearchHintBar(); }
+    else if (e.key === "Escape") { sug.style.display = "none"; activeSuggestIndex = -1; }
+  });
+
+  document.addEventListener("click", e => { if (!e.target.closest(".search-box")) sug.style.display = "none"; });
+  refreshSearchHintBar();
+});
+
+function selectAllSheets() { document.querySelectorAll("#sheetGroups input[type='checkbox']").forEach(cb => cb.checked = true); refreshSearchHintBar(); }
+
+function resetKeywordAndType() {
+    document.querySelectorAll(".common-kw, .phrase-kw").forEach(cb => cb.checked = false);
+    
+    document.querySelectorAll('input[name="searchType"]').forEach(r => {
+        r.checked = false;
+        r.disabled = false; // Gỡ khóa các Radio
+        r.parentElement.style.opacity = "1"; 
+        r.parentElement.style.pointerEvents = "auto";
+    });
+    
+    const defType = document.querySelector('input[name="searchType"][value="Trang Bị"]'); 
+    if (defType) defType.checked = true;
+    
+    // Gọi hàm đồng bộ để khóa/mờ các hotkey theo mặc định (Trang bị)
+    syncLockState(); 
+}
+
+function getCacheKey(keywordText, commonKeyword, phrase, sheets, type) { return JSON.stringify({ keywordText, commonKeyword, phrase, sheets, type }); }
+
+function showLoading(type, total, keywordDisplay) {
+  document.getElementById("loadingText").innerHTML = `Đang tìm ${type.toLowerCase()}<br><span style="font-size:13px;color:#888;">Từ khóa: <i>${keywordDisplay || "..."}</i></span>`;
+  document.getElementById("loadingProgress").innerText = `0 / ${total} gói (0%)`;
+  document.getElementById("loadingOverlay").style.display = "flex";
+}
+
+function hideLoading() { document.getElementById("loadingOverlay").style.display = "none"; }
+
+function cancelSearch() {
+  isSearchCanceled = true; currentSearchToken = null; hideLoading(); exitSearchMode();
+  document.getElementById("result").innerHTML = `
+      <div class="empty-result">
+          Đã huỷ tìm kiếm.<br>
+          <button class="back-home-btn" onclick="exitSearchMode()" style="margin-top: 16px;">
+              🔙 Quay lại
+          </button>
+      </div>`;
+  document.getElementById("pagination").innerHTML = ""; document.getElementById("searchSummary").innerHTML = "";
+  resetKeywordAndType();
+}
+
+function enterSearchMode() { document.body.classList.add("search-mode-active"); }
+function exitSearchMode() { document.body.classList.remove("search-mode-active"); }
+
+function escapeHtml(text) { return String(text||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\"/g,"&quot;").replace(/'/g,"&#39;"); }
+
+function renderResultSummary(finalKeyword, sheets) {
+  const years = [...new Set(sheets.map(s => (s.match(/(20\d{2})/) || [])[1]).filter(Boolean))];
+  document.getElementById("searchSummary").innerHTML = `🔎 Từ khóa: <span style="color:#fff">${escapeHtml(finalKeyword)}</span> | 📦 Gói: ${escapeHtml(sheets.join(", "))||"—"} | 📅 Năm: ${escapeHtml(years.join(", "))||"—"}`;
+}
+
+function renderResultTable(pageRows, totalResults, totalPages) {
+  // Lấy ra đúng Loại tìm kiếm đang được chọn trên giao diện
+  const currentSearchType = document.querySelector('input[name="searchType"]:checked')?.value || 'Trang Bị';
+
+  const start = (currentPage - 1) * RESULTS_PER_PAGE + 1; 
+  const end = Math.min(currentPage * RESULTS_PER_PAGE, totalResults);
+  
+  const rowsHtml = pageRows.map(r => {
+    const cellsHtml = r.values.map((v, i) => {
+      let cellData = v;
+      // Nếu là cột Chỉ Số (cột thứ 3, index = 2), truyền text và currentSearchType vào
+      if (i === 2) {
+          cellData = formatAllStats(v, currentSearchType);
+      }
+      return `<td style="${i === 2 ? '' : 'white-space:pre-line'}">${cellData}</td>`;
+    }).join("");
+    return `<tr onclick="google.script.run.jumpTo('${String(r.sheet).replace(/'/g, "\\'")}', ${r.row})">${cellsHtml}</tr>`;
+  }).join("");
+
+  // Các phần render toolbar và table giữ nguyên như cũ...
+  document.getElementById("result").innerHTML = `
+    <div class="result-shell">
+      <div class="result-toolbar">
+        <div>
+          <div class="result-count">Tìm thấy ${totalResults} kết quả</div>
+          <div class="result-meta">Hiển thị ${start}-${end} / Trang ${currentPage}/${totalPages}</div>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button class="result-reset-btn" onclick="document.body.classList.toggle('search-mode-active')" style="background: #2d2d2d;">🔍 Mở / Ẩn bộ lọc</button>
+          <button class="result-reset-btn" onclick="goHome()" style="background: #0078d4; border-color: #0078d4; color: #fff;">🔄 Làm mới</button>
+        </div>
+      </div>
+      <div class="result-table-wrap">
+        <table class="result-table">
+          <thead><tr><th>Phiên Bản</th><th>Trang Bị</th><th>Chỉ Số</th><th>Kỹ Năng</th></tr></thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+function renderPagination(totalPages) {
+  const pag = document.getElementById("pagination"); if (totalPages <= 1) { pag.innerHTML = ""; return; }
+  const btns = [];
+  btns.push(`<button class="page-btn" ${currentPage===1?"disabled":""} onclick="changePage(${currentPage-1})">←</button>`);
+  let start = Math.max(1, currentPage - 2); let end = Math.min(totalPages, currentPage + 2);
+  if (start > 1) { btns.push(`<button class="page-btn" onclick="changePage(1)">1</button>`); if (start > 2) btns.push(`<button class="page-btn" disabled>...</button>`); }
+  for (let i = start; i <= end; i++) btns.push(`<button class="page-btn ${i===currentPage?"active":""}" onclick="changePage(${i})">${i}</button>`);
+  if (end < totalPages) { if (end < totalPages - 1) btns.push(`<button class="page-btn" disabled>...</button>`); btns.push(`<button class="page-btn" onclick="changePage(${totalPages})">${totalPages}</button>`); }
+  btns.push(`<button class="page-btn" ${currentPage===totalPages?"disabled":""} onclick="changePage(${currentPage+1})">→</button>`);
+  pag.innerHTML = `<div class="pagination-wrap"><div class="pagination">${btns.join("")}</div></div>`;
+}
+
+function renderCurrentPage() {
+  const total = allSearchResults.length;
+  
+  // NẾU KHÔNG CÓ KẾT QUẢ -> Hiện thông báo + Nút Quay Lại
+  if (!total) {
+    document.getElementById("result").innerHTML = `
+        <div class="empty-result">
+            <div style="font-size: 32px; margin-bottom: 12px; opacity: 0.6;">📭</div>
+            Không tìm thấy kết quả phù hợp với từ khóa của bạn.<br>
+            <button class="back-home-btn" onclick="exitSearchMode()" style="margin-top: 16px; margin-right: 8px;">
+                🔙 Quay lại tìm kiếm
+            </button>
+            <button class="back-home-btn" onclick="goHome()" style="margin-top: 16px; border-color: #555; color: #ccc;">
+                🔄 Làm mới toàn bộ
+            </button>
+        </div>`;
+    document.getElementById("pagination").innerHTML = ""; 
+    return;
+  }
+  
+  // NẾU CÓ KẾT QUẢ -> Render bảng như bình thường
+  const totalPages = Math.ceil(total / RESULTS_PER_PAGE); 
+  if (currentPage > totalPages) currentPage = totalPages;
+  const startIdx = (currentPage - 1) * RESULTS_PER_PAGE;
+  
+  renderResultTable(allSearchResults.slice(startIdx, startIdx + RESULTS_PER_PAGE), total, totalPages); 
+  renderPagination(totalPages);
+}
+
+function changePage(page) {
+  const tp = Math.ceil(allSearchResults.length / RESULTS_PER_PAGE); if (page < 1 || page > tp) return;
+  currentPage = page; renderCurrentPage();
+  const sum = document.getElementById("searchSummary"); if (sum) sum.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function startSearch() {
+  const kw = document.getElementById("keyword").value.trim();
+  const common = [...document.querySelectorAll(".common-kw:checked")].map(c => c.value);
+  const phraseEls = [...document.querySelectorAll(".phrase-kw:checked")];
+  const phraseLabels = phraseEls.map(c => c.parentElement.textContent.trim());
+  const sheets = [...document.querySelectorAll("#sheetGroups input:checked")].filter(c => !c.classList.contains("year-check")).map(c => c.value);
+  const typeRad = document.querySelector('input[name="searchType"]:checked');
+
+  if (!kw && !common.length && !phraseEls.length && sheets.length) { showPackageKeywordPopup(); return; }
+  if (!kw && !common.length && !phraseEls.length) { showModernAlert("Vui lòng nhập hoặc chọn HOT KEY hoặc nhập *"); return; }
+  if (!sheets.length && (kw || common.length || phraseEls.length) && !pendingSearchAfterConfirm) { showConfirmAllSheets(); return; }
+  pendingSearchAfterConfirm = false;
+  if (!typeRad) { showModernAlert("Vui lòng chọn loại tìm kiếm."); return; }
+
+  const type = typeRad.value; const isAll = kw === "*"; const finalKW = isAll ? "*" : [kw, common.join(", "), ...phraseLabels].filter(Boolean).join(", ");
+  const cacheKey = getCacheKey(kw, common.join(", "), phraseEls.map(c=>c.value), sheets, type);
+
+  if (sessionStorage.getItem(cacheKey)) {
+    allSearchResults = JSON.parse(sessionStorage.getItem(cacheKey)); currentPage = 1;
+    renderResultSummary(finalKW, sheets); enterSearchMode(); renderCurrentPage();
+    document.getElementById("keyword").value = ""; resetKeywordAndType(); toggleSearchBox(true); return;
+  }
+
+  isSearchCanceled = false; currentSearchToken = Date.now();
+  showLoading(type, sheets.length || 1, finalKW);
+  
+  let i = 0; const sCount = sheets.length || 1;
+  const timer = setInterval(() => {
+    if (isSearchCanceled) return clearInterval(timer);
+    i++; const cur = Math.min(i, sCount); const pct = Math.floor((cur/sCount)*100);
+    document.getElementById("loadingProgress").innerText = `${pct}%`;
+    document.getElementById("progressFill").style.width = pct + "%";
+    if (i >= sCount) clearInterval(timer);
+  }, 450);
+  
+  saveUserKeyword(kw);
+  google.script.run.withSuccessHandler(res => {
+    if (isSearchCanceled || currentSearchToken === null) return;
+    document.getElementById("progressFill").style.width = "100%"; hideLoading();
+    renderResultSummary(finalKW, sheets); allSearchResults = Array.isArray(res) ? res : []; currentPage = 1;
+    enterSearchMode(); renderCurrentPage(); sessionStorage.setItem(cacheKey, JSON.stringify(allSearchResults));
+    document.getElementById("keyword").value = ""; resetKeywordAndType(); toggleSearchBox(true);
+  }).withFailureHandler(err => {
+    hideLoading(); alert("Có lỗi: " + (err?.message || err));
+  }).searchItems(finalKW, phraseEls.map(c=>c.value), sheets, type, isAll);
+}
+
+// KHỞI TẠO DỮ LIỆU GÓI (ACCORDION)
+google.script.run.withSuccessHandler(sheets => {
+
+  // THÊM DÒNG NÀY: Lọc bỏ các sheet có tên VIP và CHAT
+  sheets = sheets.filter(name => !name.toUpperCase().includes("VIP") && !name.toUpperCase().includes("CHAT"));
+
+  const groups = {};
+  sheets.forEach(n => { const y = (n.match(/(20\d{2})$/) || [])[1] || "Khác"; groups[y] = groups[y] || []; groups[y].push(n); });
+  const box = document.getElementById("sheetGroups"); box.innerHTML = "";
+  let count = 0;
+  Object.keys(groups).sort((a,b)=>b.localeCompare(a)).forEach(y => {
+    count++; const g = document.createElement("div");
+    g.className = "year-group closed"; // Đã sửa: Ép tất cả đều thêm class 'closed'
+    g.innerHTML = `<div class="year-header"><label class="year-title"><input type="checkbox" class="year-check"> Năm ${y}</label><div class="year-toggle">▾</div></div>`;
+    const grid = document.createElement("div"); grid.className = "year-grid";
+    groups[y].forEach(s => grid.innerHTML += `<label><input type="checkbox" value="${s}"> ${s}</label>`);
+    
+    const yc = g.querySelector(".year-check");
+    yc.onchange = e => { grid.querySelectorAll("input").forEach(cb => cb.checked = e.target.checked); refreshSearchHintBar(); };
+    grid.onchange = () => { yc.checked = [...grid.querySelectorAll("input")].every(cb => cb.checked); refreshSearchHintBar(); };
+    g.querySelector(".year-toggle").onclick = (e) => { e.preventDefault(); g.classList.toggle("closed"); };
+    
+    g.appendChild(grid); box.appendChild(g);
+  });
+  refreshSearchHintBar();
+}).getAvailableSheets();
+
+const USER_SESSION_ID = Date.now().toString(36) + Math.random().toString(36).substring(2);
+function updateOnlineCount() {
+  google.script.run.withSuccessHandler(data => {
+    document.getElementById("onlineCount").innerText = (data.online * 5); document.getElementById("totalCount").innerText = (data.total * 2).toLocaleString();
+  }).pingOnline(USER_SESSION_ID);
+}
+updateOnlineCount(); setInterval(updateOnlineCount, 20000);
+
+function toggleHelp() {
+  const content = document.getElementById("helpContent"); const icon = document.getElementById("helpToggle");
+  if (content.classList.contains("open")) { content.classList.remove("open"); icon.textContent = "▾"; }
+  else { content.classList.add("open"); icon.textContent = "▸"; }
+}
+
+function toggleSearchBox(forceClose = false) {
+  const content = document.getElementById("searchMainContent"); const icon = document.getElementById("searchMainToggle");
+  if (!content || !icon) return;
+  if (forceClose || !content.classList.contains("closed")) { content.classList.add("closed"); icon.textContent = "▾"; }
+  else { content.classList.remove("closed"); icon.textContent = "▸"; }
+}
+
+const DEFAULT_KEYWORDS = ["đánh bại", "bị đánh bại", "hạ gục", "miễn dịch 100% sát thương", "kháng 100%"];
+function getUserKeywords() { return JSON.parse(localStorage.getItem("USER_SEARCH_KEYWORDS") || "[]"); }
+function saveUserKeyword(kw) {
+  if (!kw || kw.length < 3) return; let list = getUserKeywords();
+  if (!list.includes(kw)) { list.unshift(kw); if (list.length > 50) list.pop(); localStorage.setItem("USER_SEARCH_KEYWORDS", JSON.stringify(list)); }
+}
+
+function showModernAlert(msg) { const b = document.getElementById("modernAlert"); document.getElementById("modernAlertText").innerText = msg; b.style.display = "flex"; setTimeout(() => b.style.display = "none", 2200); }
+function showBuildComingSoon() { showModernAlert("🚧 Tính năng đang phát triển."); }
+function openContact() { document.getElementById("chatBox").style.display = "flex"; }
+function closeChat() { document.getElementById("chatBox").style.display = "none"; }
+function sendContactForm() {
+  const name = document.getElementById("contactName").value.trim();
+  const phone = document.getElementById("contactPhone").value.trim();
+  const message = document.getElementById("contactMessage").value.trim();
+  const btn = document.getElementById("sendBtn");
+
+  if (!message) {
+    showModernAlert("Vui lòng nhập nội dung hỗ trợ.");
+    return;
+  }
+
+  btn.innerText = "Đang gửi...";
+  btn.style.opacity = "0.7";
+
+  const fullMessage =
+    "Tên: " + (name || "Chưa nhập") + "\n" +
+    "SĐT: " + (phone || "Chưa nhập") + "\n" +
+    "Nội dung: " + message;
+
+  google.script.run
+    .withSuccessHandler(() => {
+      btn.innerText = "Gửi yêu cầu";
+      btn.style.opacity = "1";
+      document.getElementById("successPopup").style.display = "flex";
+      document.getElementById("contactName").value = "";
+      document.getElementById("contactPhone").value = "";
+      document.getElementById("contactMessage").value = "";
+    })
+    .withFailureHandler(err => {
+      btn.innerText = "Gửi yêu cầu";
+      btn.style.opacity = "1";
+      showModernAlert("Lỗi gửi hỗ trợ: " + (err?.message || err));
+    })
+    .saveChatMessage(USER_SESSION_ID, fullMessage);
+}
+function closeSuccessPopup() { document.getElementById("successPopup").style.display = "none"; closeChat(); }
+function openHelpPopup() { closeChat(); document.getElementById("helpPopup").style.display = "flex"; }
+function closeHelpPopup() { document.getElementById("helpPopup").style.display = "none"; }
+function showConfirmAllSheets() { document.getElementById("confirmAllSheets").style.display = "flex"; }
+function hideConfirmAllSheets() { document.getElementById("confirmAllSheets").style.display = "none"; }
+function cancelSelectAllSheets() { pendingSearchAfterConfirm = false; hideConfirmAllSheets(); }
+function confirmSelectAllSheets() { hideConfirmAllSheets(); selectAllSheets(); pendingSearchAfterConfirm = true; startSearch(); }
+function showPackageKeywordPopup() { document.getElementById("packageKeywordPopup").style.display = "flex"; }
+function hidePackageKeywordPopup() { document.getElementById("packageKeywordPopup").style.display = "none"; }
+function searchAllWithStar() { document.getElementById("keyword").value = "*"; hidePackageKeywordPopup(); refreshSearchHintBar(); startSearch(); }
+function focusKeywordInput() { hidePackageKeywordPopup(); const input = document.getElementById("keyword"); if (input) input.focus(); }
+
+document.addEventListener("DOMContentLoaded", () => {
+    const hotKeys = document.querySelectorAll('.common-kw, .phrase-kw');
+    const searchRadios = document.querySelectorAll('input[name="searchType"]');
+    const isSpeed = cb => cb.value.toLowerCase().includes('tốc');
+
+    // 1. BẮT SỰ KIỆN: Khi người dùng bấm trực tiếp vào Loại (Kỹ Năng, Chỉ Số, Trang Bị)
+    searchRadios.forEach(radio => {
+        radio.addEventListener('change', () => {
+            // Tự động bỏ tick các hotkey đang chọn để tránh lỗi mang theo thông số ẩn
+            hotKeys.forEach(cb => cb.checked = false); 
+            
+            /* --- NẾU BẠN MUỐN KHÓA CỨNG LUÔN 2 NÚT RADIO CÒN LẠI THẬT SỰ ---
+               (Chỉ mở lại được khi người dùng bấm nút Làm Mới) 
+               thì hãy XÓA 2 DẤU GẠCH CHÉO // ở đầu dòng bên dưới: */
+            // searchRadios.forEach(r => { if(r !== radio) { r.disabled = true; r.parentElement.style.opacity = "0.3"; r.parentElement.style.pointerEvents = "none"; } });
+            
+            syncLockState();
+        });
+    });
+
+    // 2. BẮT SỰ KIỆN: Khi người dùng lười, bấm thẳng vào Hotkey
+    hotKeys.forEach(cb => {
+        cb.addEventListener('change', () => {
+            if (cb.checked) {
+                // Tự động nhảy Radio Button tương ứng
+                if (isSpeed(cb)) {
+                    document.querySelector('input[name="searchType"][value="Chỉ số"]').checked = true;
+                } else {
+                    document.querySelector('input[name="searchType"][value="Kỹ năng"]').checked = true;
+                }
+            }
+            syncLockState(); 
+        });
+    });
+
+    // Khởi chạy đồng bộ ngay khi vừa Load trang xong
+    syncLockState();
+});
+
+function updateKeywordInputState() {
+  const kw = document.getElementById("keyword"); const box = document.querySelector(".search-box");
+  const hasHotKey = [...document.querySelectorAll(".common-kw:checked, .phrase-kw:checked")].length > 0;
+  if (!kw || !box) return;
+  if (hasHotKey) { kw.value = ""; kw.readOnly = true; kw.placeholder = "Đã chọn HOT KEY"; box.style.opacity = "0.5"; }
+  else { kw.readOnly = false; kw.placeholder = "Nhập từ khoá cần tìm..."; box.style.opacity = "1"; }
+}
+
+// TÍNH NĂNG DARK/LIGHT MODE CHUYÊN NGHIỆP
+// ==========================================================================
+function toggleTheme() {
+  const isDark = document.getElementById('themeToggle').checked;
+  if (isDark) {
+    document.body.classList.remove('light-mode');
+    localStorage.setItem('VLCM_THEME', 'dark');
+  } else {
+    document.body.classList.add('light-mode');
+    localStorage.setItem('VLCM_THEME', 'light');
+  }
+}
+
+// Khôi phục giao diện khi load lại trang
+document.addEventListener('DOMContentLoaded', () => {
+  const savedTheme = localStorage.getItem('VLCM_THEME') || 'dark'; // Mặc định là Dark
+  const themeToggle = document.getElementById('themeToggle');
+  
+  if (savedTheme === 'light') {
+    document.body.classList.add('light-mode');
+    if (themeToggle) themeToggle.checked = false; // Gạt sang trái (Sáng)
+  } else {
+    document.body.classList.remove('light-mode');
+    if (themeToggle) themeToggle.checked = true; // Gạt sang phải (Tối)
+  }
+}); 
+
+// HÀM ĐỒNG BỘ KHÓA/MỞ KHÓA GIAO DIỆN
+// HÀM ĐỒNG BỘ KHÓA/MỞ KHÓA GIAO DIỆN (ĐÃ TỐI ƯU HIỆU NĂNG)
+function syncLockState() {
+    const selectedRadio = document.querySelector('input[name="searchType"]:checked');
+    if (!selectedRadio) return;
+    const selectedType = selectedRadio.value;
+    const hotKeys = document.querySelectorAll('.common-kw, .phrase-kw');
+    
+    const isSpeed = cb => cb.value.toLowerCase().includes('tốc');
+    const isSkill = cb => !cb.value.toLowerCase().includes('tốc');
+
+    // Chạy một vòng lặp duy nhất, dùng classList thay vì chèn Style nội tuyến
+    hotKeys.forEach(cb => {
+        const label = cb.parentElement;
+        let shouldLock = false;
+
+        if (selectedType === 'Trang Bị') {
+            shouldLock = false;
+        } else if (selectedType === 'Kỹ năng') {
+            shouldLock = !isSkill(cb);
+        } else if (selectedType === 'Chỉ số') {
+            shouldLock = !isSpeed(cb);
+        }
+
+        cb.disabled = shouldLock;
+        if (shouldLock) {
+            label.classList.add('locked-ui');
+        } else {
+            label.classList.remove('locked-ui');
+        }
+    });
+    
+    updateKeywordInputState();
+    refreshSearchHintBar();
+}
+
+</script>
+
+<!-- ==========================================================================
+     HỆ THỐNG PHÂN QUYỀN FREE / ĐĂNG NHẬP VIP BẰNG TÀI KHOẢN TRONG SHEET
+     ========================================================================== -->
+<div id="authOverlay" style="position:fixed; inset:0; z-index:9999999; background:rgba(0,0,0,0.9); display:flex; align-items:center; justify-content:center; backdrop-filter:blur(15px); font-family:'Segoe UI', sans-serif;">
+  <div style="background:#1a1a1a; padding:40px; border-radius:16px; border:1px solid #333; text-align:center; width:400px; max-width:calc(100vw - 32px); box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+    <h2 style="color:#fff; margin-bottom:10px; font-size:22px; font-weight:800;">XÁC THỰC TRUY CẬP</h2>
+    <p style="color:#888; margin-bottom:26px; font-size:13px; line-height:1.5;">Vui lòng chọn chế độ sử dụng phù hợp</p>
+    
+    <div style="display:flex; flex-direction:column; gap:15px;">
+      <button id="freeModeBtn" onclick="selectAuthMode('FREE')" style="padding:18px; min-height:74px; border-radius:10px; border:1px solid #444; background:#252525; color:#ff9800; cursor:pointer; font-weight:bold; transition:0.2s; text-align:center; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+        <span style="font-size:16px;">🎁 GÓI MIỄN PHÍ</span>
+        <small style="color:#777; font-weight:normal; font-size:11px; margin-top:6px; display:block;">Giới hạn 3 lượt & chỉ tìm Tên Trang Bị</small>
+      </button>
+
+      <button onclick="selectAuthMode('VIP')" style="padding:18px; min-height:74px; border-radius:10px; border:1px solid #444; background:#252525; color:#4cc2ff; cursor:pointer; font-weight:bold; transition:0.2s; text-align:center; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+        <span style="font-size:16px;">💎 ĐĂNG NHẬP VIP 💎</span>
+        <small style="color:#777; font-weight:normal; font-size:11px; margin-top:6px; display:block;">Dùng tài khoản do admin cung cấp</small>
+      </button>
+    </div>
+
+    <div id="authStatusMsg" style="display:none; margin-top:18px; padding:12px; border-radius:10px; background:#111; border:1px solid #333; color:#aaa; font-size:12px; line-height:1.5; text-align:left;"></div>
+
+    <button id="vipContactOpenBtn" onclick="openVipContactPopup()" style="display:none; margin-top:12px; width:100%; padding:13px 16px; border-radius:10px; border:1px solid rgba(76,194,255,0.35); background:rgba(76,194,255,0.08); color:#4cc2ff; cursor:pointer; font-weight:800; font-size:13px; transition:0.2s;">
+      📩 Đăng ký VIP
+    </button>
+  </div>
+</div>
+
+<!-- ==========================================================================
+     POPUP ĐĂNG NHẬP VIP
+     ========================================================================== -->
+<style>
+  .vip-login-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10000020;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.72);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    font-family: 'Segoe UI', sans-serif;
+  }
+
+  .vip-login-card {
+    width: 460px;
+    max-width: calc(100vw - 32px);
+    background: linear-gradient(180deg,#202020 0%,#151515 100%);
+    border: 1px solid #3c3c3c;
+    border-radius: 18px;
+    box-shadow: 0 26px 70px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.06);
+    padding: 24px;
+    color: #fff;
+    animation: vipLoginPop 0.2s ease;
+  }
+
+  @keyframes vipLoginPop {
+    from { transform: translateY(10px) scale(0.96); opacity: 0; }
+    to { transform: translateY(0) scale(1); opacity: 1; }
+  }
+
+  .vip-login-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+
+  .vip-login-kicker {
+    font-size: 12px;
+    color: #4cc2ff;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 7px;
+  }
+
+  .vip-login-title {
+    font-size: 22px;
+    font-weight: 850;
+    color: #fff;
+    line-height: 1.25;
+  }
+
+  .vip-login-desc {
+    font-size: 13px;
+    color: #9a9a9a;
+    margin-top: 7px;
+    line-height: 1.55;
+  }
+
+  .vip-login-close {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    border: 1px solid #3d3d3d;
+    background: #242424;
+    color: #aaa;
+    font-size: 20px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: 0.2s;
+  }
+
+  .vip-login-close:hover { background:#333; color:#fff; }
+
+  .vip-login-field { margin-bottom: 14px; }
+  .vip-login-field label {
+    display: block;
+    margin-bottom: 8px;
+    color: #d0d0d0;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .vip-login-field input {
+    width: 100%;
+    box-sizing: border-box;
+    height: 47px;
+    padding: 0 14px;
+    border-radius: 11px;
+    border: 1px solid #4a4a4a;
+    background: #0f0f0f;
+    color: #fff;
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+  }
+
+  .vip-login-field input:focus {
+    border-color: #4cc2ff;
+    box-shadow: 0 0 0 2px rgba(76,194,255,0.15);
+    background: #121212;
+  }
+
+  .vip-login-note {
+    margin: 4px 0 16px;
+    padding: 10px 12px;
+    border-radius: 11px;
+    border: 1px solid rgba(76,194,255,0.22);
+    background: rgba(76,194,255,0.07);
+    color: #9fdfff;
+    font-size: 12px;
+    line-height: 1.45;
+  }
+
+  .vip-login-error {
+    display: none;
+    margin: 4px 0 14px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    color: #ff9c9c;
+    background: rgba(255,107,107,0.1);
+    border: 1px solid rgba(255,107,107,0.25);
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.45;
+  }
+
+  .vip-login-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 4px;
+    flex-wrap: wrap;
+  }
+
+  .vip-login-btn {
+    height: 42px;
+    min-width: 108px;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    font-size: 13px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: 0.2s;
+  }
+
+  .vip-login-btn.secondary { background:#2d2d2d; color:#ccc; border-color:#4a4a4a; }
+  .vip-login-btn.secondary:hover { background:#3a3a3a; color:#fff; }
+  .vip-login-btn.primary { min-width:140px; background:#0078d4; color:#fff; border-color:#0078d4; box-shadow:0 3px 12px rgba(0,120,212,0.24); }
+  .vip-login-btn.primary:hover { background:#0063b1; }
+  .vip-login-btn:disabled { opacity:0.55; cursor:not-allowed; }
+</style>
+
+<div id="vipLoginPopup" class="vip-login-overlay">
+  <div class="vip-login-card" role="dialog" aria-modal="true" aria-labelledby="vipLoginTitle">
+    <div class="vip-login-header">
+      <div>
+        <div class="vip-login-kicker">Tài khoản VIP</div>
+        <div id="vipLoginTitle" class="vip-login-title">Đăng nhập VIP</div>
+        <div class="vip-login-desc">Nhập email và mật khẩu VIP đã được admin cấp <b>VĨNH VIỄN</b>.</div>
+      </div>
+      <button type="button" class="vip-login-close" onclick="closeVipLoginPopup()">×</button>
+    </div>
+
+    <div class="vip-login-field">
+      <label for="vipLoginEmail">Địa chỉ email</label>
+      <input id="vipLoginEmail" type="email" placeholder="Ví dụ: abc@gmail.com" autocomplete="email">
+    </div>
+
+    <div class="vip-login-field">
+      <label for="vipLoginPassword">Mật khẩu</label>
+      <input id="vipLoginPassword" type="password" placeholder="Nhập mật khẩu VIP" autocomplete="current-password" onkeydown="if(event.key==='Enter') submitVipLogin()">
+    </div>
+
+    <div class="vip-login-note">
+  Chưa có tài khoản? Bấm <b>Đăng ký</b> để gửi email và số điện thoại đăng ký VIP.
+  <br>
+  Quên mật khẩu?
+  <button type="button" onclick="closeVipLoginPopup(); openForgotVipPopup()" style="background:none;border:none;color:#4cc2ff;font-weight:800;cursor:pointer;padding:0;">
+    Cấp lại mật khẩu mới
+  </button>
+</div>
+
+    <div id="vipLoginError" class="vip-login-error"></div>
+
+    <div class="vip-login-actions">
+  <button type="button" class="vip-login-btn secondary" onclick="closeVipLoginPopup()">Hủy</button>
+  <button type="button" class="vip-login-btn secondary" onclick="closeVipLoginPopup(); openVipContactPopup()">Đăng ký</button>
+  <button id="vipLoginSubmitBtn" type="button" class="vip-login-btn primary" onclick="submitVipLogin()">Đăng nhập</button>
+</div>
+  </div>
+</div>
+
+<script>
+  window.openVipLoginPopup = function() {
+    const popup = document.getElementById("vipLoginPopup");
+    const emailInput = document.getElementById("vipLoginEmail");
+    const passInput = document.getElementById("vipLoginPassword");
+    const errorBox = document.getElementById("vipLoginError");
+
+    if (errorBox) {
+      errorBox.style.display = "none";
+      errorBox.innerText = "";
+    }
+
+    const knownEmail = localStorage.getItem("vlcm_user_email") || "";
+    if (emailInput && !emailInput.value && knownEmail) emailInput.value = knownEmail;
+    if (passInput) passInput.value = "";
+
+    if (popup) popup.style.display = "flex";
+    setTimeout(() => {
+      if (emailInput && !emailInput.value) emailInput.focus();
+      else if (passInput) passInput.focus();
+    }, 60);
+  };
+
+  window.closeVipLoginPopup = function() {
+    const popup = document.getElementById("vipLoginPopup");
+    if (popup) popup.style.display = "none";
+  };
+
+  window.submitVipLogin = function() {
+    const emailInput = document.getElementById("vipLoginEmail");
+    const passInput = document.getElementById("vipLoginPassword");
+    const errorBox = document.getElementById("vipLoginError");
+    const btn = document.getElementById("vipLoginSubmitBtn");
+
+    const email = (emailInput?.value || "").trim();
+    const password = (passInput?.value || "").trim();
+
+    if (errorBox) {
+      errorBox.style.display = "none";
+      errorBox.innerText = "";
+    }
+
+    if (!email || !email.includes("@")) {
+      if (errorBox) {
+        errorBox.innerText = "Vui lòng nhập địa chỉ email hợp lệ.";
+        errorBox.style.display = "block";
+      }
+      if (emailInput) emailInput.focus();
+      return;
+    }
+
+    if (!password) {
+      if (errorBox) {
+        errorBox.innerText = "Vui lòng nhập mật khẩu VIP.";
+        errorBox.style.display = "block";
+      }
+      if (passInput) passInput.focus();
+      return;
+    }
+
+    if (btn) {
+      btn.disabled = true;
+      btn.innerText = "Đang kiểm tra...";
+    }
+
+    google.script.run
+      .withSuccessHandler(res => {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerText = "Đăng nhập";
+        }
+
+        if (res && res.ok) {
+          closeVipLoginPopup();
+          if (typeof activateVip === "function") {
+            activateVip(res.email || email);
+          } else {
+            localStorage.setItem("vlcm_user_role", "VIP");
+            localStorage.setItem("vlcm_user_email", res.email || email);
+            showModernAlert("✅ Đăng nhập VIP thành công.");
+          }
+          return;
+        }
+
+        if (errorBox) {
+          errorBox.innerText = (res && res.message) ? res.message : "Email hoặc mật khẩu VIP không đúng.";
+          errorBox.style.display = "block";
+        }
+      })
+      .withFailureHandler(err => {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerText = "Đăng nhập";
+        }
+        if (errorBox) {
+          errorBox.innerText = "Lỗi đăng nhập VIP: " + (err?.message || err);
+          errorBox.style.display = "block";
+        }
+      })
+      .verifyVipLogin({ email: email, password: password });
+  };
+</script>
+
+<?!= include("VipContact"); ?>
+<?!= include("ForgotPassword"); ?>
+
+<script>
+(function() {
+  const FREE_QUOTA = 3;
+  const FREE_COUNT_KEY = "vlcm_search_count";
+  const FREE_DATE_KEY = "vlcm_search_date";
+
+  function todayKey() {
+    const d = new Date();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${d.getFullYear()}-${m}-${day}`;
+  }
+
+  function getFreeCount() {
+    const today = todayKey();
+    if (localStorage.getItem(FREE_DATE_KEY) !== today) {
+      localStorage.setItem(FREE_DATE_KEY, today);
+      localStorage.setItem(FREE_COUNT_KEY, "0");
+    }
+    return parseInt(localStorage.getItem(FREE_COUNT_KEY) || "0", 10);
+  }
+
+  function setFreeCount(count) {
+    localStorage.setItem(FREE_DATE_KEY, todayKey());
+    localStorage.setItem(FREE_COUNT_KEY, String(count));
+  }
+
+  function setAuthStatus(message, color = "#aaa", showContactButton = false) {
+    const box = document.getElementById("authStatusMsg");
+    const contactBtn = document.getElementById("vipContactOpenBtn");
+
+    if (box) {
+      box.style.display = message ? "block" : "none";
+      box.style.color = color;
+      box.innerHTML = message || "";
+    }
+
+    if (contactBtn) {
+      contactBtn.style.display = showContactButton ? "block" : "none";
+    }
+  }
+
+  function hideAuthOverlay() {
+    const overlay = document.getElementById("authOverlay");
+    if (overlay) overlay.style.display = "none";
+  }
+
+  function showAuthOverlay(vipOnly = false) {
+    const overlay = document.getElementById("authOverlay");
+    const freeBtn = document.getElementById("freeModeBtn");
+    if (overlay) overlay.style.display = "flex";
+    if (freeBtn) freeBtn.style.display = vipOnly ? "none" : "flex";
+  }
+
+  function unlockVipUi() {
+    document.querySelectorAll('input[name="searchType"]').forEach(r => {
+      r.disabled = false;
+      if (r.parentElement) {
+        r.parentElement.style.opacity = "1";
+        r.parentElement.style.pointerEvents = "auto";
+        r.parentElement.title = "";
+      }
+    });
+
+    document.querySelectorAll('.common-kw, .phrase-kw').forEach(cb => {
+      cb.disabled = false;
+      if (cb.parentElement) cb.parentElement.classList.remove('locked-ui');
+    });
+
+    if (typeof syncLockState === "function") syncLockState();
+  }
+
+  window.activateVip = function(email) {
+  localStorage.setItem("vlcm_user_role", "VIP");
+  localStorage.setItem("vlcm_user_email", email || "");
+
+  hideAuthOverlay();
+  unlockVipUi();
+
+  if (typeof updateAccountHeader === "function") {
+    updateAccountHeader();
+  }
+
+  hookStartSearchForFree();
+
+  showModernAlert("✅ Đăng nhập VIP thành công" + (email ? ": " + email : ""));
+};
+
+  window.selectAuthMode = function(mode) {
+    if (mode === "VIP") {
+      setAuthStatus("", "#aaa", false);
+      openVipLoginPopup();
+      return;
+    }
+
+    localStorage.setItem("vlcm_user_role", "FREE");
+localStorage.removeItem("vlcm_user_email");
+
+hideAuthOverlay();
+
+if (typeof updateAccountHeader === "function") {
+  updateAccountHeader();
+}
+
+initFreeProtection();
+updateRemainingUI(FREE_QUOTA - getFreeCount());
+  };
+
+  function applyFreeUiLock() {
+    if (localStorage.getItem("vlcm_user_role") === "VIP") {
+      unlockVipUi();
+      return;
+    }
+
+    const trangBi = document.querySelector('input[name="searchType"][value="Trang Bị"]');
+    if (trangBi) trangBi.checked = true;
+
+    document.querySelectorAll('input[name="searchType"]').forEach(t => {
+      if (t.value !== "Trang Bị") {
+        t.disabled = true;
+        if (t.parentElement) {
+          t.parentElement.style.opacity = "0.2";
+          t.parentElement.style.pointerEvents = "none";
+          t.parentElement.title = "Chỉ dành cho VIP";
+        }
+      }
+    });
+
+    document.querySelectorAll('.common-kw, .phrase-kw').forEach(cb => {
+      cb.checked = false;
+      cb.disabled = true;
+      if (cb.parentElement) cb.parentElement.classList.add('locked-ui');
+    });
+
+    updateKeywordInputState();
+    refreshSearchHintBar();
+  }
+
+  function initFreeProtection() {
+    if (window.__vlcmFreeProtectionStarted) return;
+    window.__vlcmFreeProtectionStarted = true;
+
+    setInterval(() => {
+      applyFreeUiLock();
+      hookStartSearchForFree();
+    }, 1000);
+  }
+
+  // HÀM TẠO MÃ ID THIẾT BỊ ẨN (Để nhận diện khách cũ/mới)
+  function getAnonymousDeviceId() {
+    let deviceId = localStorage.getItem("vlcm_device_id");
+    if (!deviceId) {
+      // Nếu là lần đầu truy cập, tạo một mã ngẫu nhiên kiểu: FREE_a1b2c3d4
+      deviceId = "FREE_" + Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+      localStorage.setItem("vlcm_device_id", deviceId);
+    }
+    return deviceId;
+  }
+
+  function hookStartSearchForFree() {
+    // Đổi tên biến cờ hiệu để không bị trùng hook
+    if (!window.startSearch || window.startSearch.isTrackingHooked) return;
+
+    const originalSearch = window.startSearch;
+    window.startSearch = function() {
+      
+      // 1. THU THẬP THÔNG TIN TÌM KIẾM CHUNG CỦA LẦN CLICK NÀY
+      let finalKw = "";
+      try {
+        const keywordInput = document.getElementById("keyword") ? document.getElementById("keyword").value : "";
+        const commonKws = [...document.querySelectorAll(".common-kw:checked, .phrase-kw:checked")].map(c => c.parentElement.textContent.trim()).join(", ");
+        finalKw = keywordInput || commonKws || "Tìm theo nút/Gói";
+      } catch (e) {
+        finalKw = "Lỗi đọc từ khóa";
+      }
+
+      const deviceId = getAnonymousDeviceId();
+      const userAgent = navigator.userAgent;
+      const userRole = localStorage.getItem("vlcm_user_role");
+
+      // 2. XỬ LÝ NẾU LÀ TÀI KHOẢN VIP
+      if (userRole === "VIP") {
+        const vipEmail = localStorage.getItem("vlcm_user_email") || "Lỗi mất Email";
+        
+        // Gửi ngầm dữ liệu về sheet Log_VIP_Search
+        google.script.run.logVipUserSearch(vipEmail, deviceId, userAgent, finalKw);
+        
+        // Cho phép tìm kiếm bình thường
+        return originalSearch();
+      }
+
+      // 3. XỬ LÝ NẾU LÀ NGƯỜI DÙNG FREE
+      const count = getFreeCount();
+
+      // Kiểm tra hết lượt chưa
+      if (count >= FREE_QUOTA) {
+        showModernAlert(`🚫 Đã hết ${FREE_QUOTA} lượt miễn phí! Vui lòng đăng nhập VIP.`);
+
+        setTimeout(() => {
+          showAuthOverlay(true);
+          setAuthStatus("Bạn đã dùng hết lượt miễn phí hôm nay. Hãy bấm <b>ĐĂNG NHẬP VIP</b> hoặc gửi thông tin liên hệ cho admin.", "#ff9800", true);
+          localStorage.removeItem("vlcm_user_role");
+          if (typeof goHome === "function") goHome();
+        }, 1000);
+        return;
+      }
+
+      // Gửi ngầm dữ liệu về sheet Log_Free_Users
+      google.script.run.logFreeUserSearch(deviceId, userAgent, finalKw, count + 1);
+
+      // Chạy tìm kiếm gốc
+      originalSearch();
+
+      // Cập nhật lại số lượt hiển thị trên màn hình
+      const nextCount = count + 1;
+      setFreeCount(nextCount);
+      updateRemainingUI(FREE_QUOTA - nextCount);
+    };
+
+    window.startSearch.isTrackingHooked = true;
+  }
+
+  function updateRemainingUI(rem) {
+    const sum = document.getElementById("searchSummary");
+    if (sum) {
+      const safeRemain = Math.max(0, rem);
+      sum.innerHTML = `<span style="color:#ff9800; font-weight:bold;">🛡️ CHẾ ĐỘ FREE: Còn ${safeRemain} lượt tìm kiếm hôm nay.</span>`;
+    }
+  }
+
+  const savedRole = localStorage.getItem("vlcm_user_role");
+
+  if (savedRole === "VIP") {
+    hideAuthOverlay();
+    unlockVipUi();
+    // THÊM DÒNG NÀY VÀO ĐÂY NỮA
+    hookStartSearchForFree();
+  } else if (savedRole === "FREE") {
+    hideAuthOverlay();
+    setTimeout(() => {
+      initFreeProtection();
+      updateRemainingUI(FREE_QUOTA - getFreeCount());
+    }, 1000);
+  } else {
+    showAuthOverlay(false);
+  }
+})();
+</script>
+
+<script>
+  function updateAccountHeader() {
+    const header = document.getElementById("accountHeader");
+    const emailText = document.getElementById("accountEmailText");
+
+    if (!header || !emailText) return;
+
+    const role = localStorage.getItem("vlcm_user_role") || "";
+    const email = localStorage.getItem("vlcm_user_email") || "";
+
+    if (role === "VIP" && email) {
+  emailText.innerText = email;
+  header.style.display = "flex";
+  return;
+}
+
+if (role === "FREE") {
+  emailText.innerText = "Khách vãng lai";
+  header.style.display = "flex";
+  return;
+}
+
+    header.style.display = "none";
+  }
+
+  function logoutAccount() {
+    localStorage.removeItem("vlcm_user_role");
+    localStorage.removeItem("vlcm_user_email");
+
+    sessionStorage.clear();
+
+    if (typeof goHome === "function") {
+      goHome();
+    }
+
+    updateAccountHeader();
+
+    const overlay = document.getElementById("authOverlay");
+    const freeBtn = document.getElementById("freeModeBtn");
+
+    if (freeBtn) freeBtn.style.display = "flex";
+    if (overlay) overlay.style.display = "flex";
+
+    if (typeof showModernAlert === "function") {
+      showModernAlert("✅ Đã đăng xuất tài khoản.");
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", updateAccountHeader);
+</script>
+
+<script>
+  function openForgotFromLogin() {
+    if (typeof closeVipLoginPopup === "function") closeVipLoginPopup();
+    if (typeof closeVipContactPopup === "function") closeVipContactPopup();
+    if (typeof openForgotVipPopup === "function") openForgotVipPopup();
+  }
+
+  function openContactFromLogin() {
+    if (typeof closeVipLoginPopup === "function") closeVipLoginPopup();
+    if (typeof closeForgotVipPopup === "function") closeForgotVipPopup();
+    if (typeof openVipContactPopup === "function") openVipContactPopup();
+  }
+</script>
+
+
+</body>
+</html>
